@@ -7,7 +7,7 @@ using System.Collections.Generic;
 namespace TileMapper
 {
     [ExecuteInEditMode]
-    class Wall : MonoBehaviour
+    class Wall : Tile
     {
         public enum Orientation { TOP, BOTTOM, LEFT, RIGHT, CENTER };
 
@@ -60,9 +60,7 @@ namespace TileMapper
                 Children.Add(child.gameObject);
             Children.ForEach(child => DestroyImmediate(child));
 
-            // Snap to a 16x16 grid automatically
-            if (transform.position.x * 100 % 16 != 0 || transform.position.y * 100 % 16 != 0)
-                transform.position = new Vector3(Mathf.Round(transform.position.x * 100 / 16) * 0.16f, Mathf.Round(transform.position.y * 100 / 16) * 0.16f, transform.position.z);
+            SnapToGrid();
 
             // Checks to make sure the user didn't forget to add the 
             // floor prefab that will be used to tile the floor
