@@ -1,8 +1,10 @@
 ﻿using UnityEngine;
+using UnityEditor;
 using System.Collections.Generic;
 
 namespace TileMapper
 {
+    [ExecuteInEditMode]
     class Floor : MonoBehaviour
     {
         [SerializeField]
@@ -11,12 +13,30 @@ namespace TileMapper
         protected SpriteRenderer m_SpriteRenderer;
 
         // Used to instantiate the requred objects to fill the space
-        void Start()
+        void Update()
         {
+            if (gameObject == null)
+            {
+                Debug.LogError("This script must be attatched to a game object to function!");
+                return;
+            }
             // Checks to make sure the user didn't forget to add a sprite renderer
             // One is not required, but recommended for error checking
             if ((m_SpriteRenderer = GetComponent<SpriteRenderer>()) == null)
                 Debug.LogWarning(name + " has no sprite renderer!");
+
+            // Collect all children, then delete them
+            List<GameObject> Children = new List<GameObject>();
+            foreach (Transform child in transform)
+                Children.Add(child.gameObject);
+            Children.ForEach(child => DestroyImmediate(child));
+
+            // Snap to a 16x16 grid automatically
+            if ((transform.position.x - 0.08f) * 100 % 16 != 0 || (transform.position.y + 0.08f) * 100 % 16 != 0)
+                transform.position = new Vector3(Mathf.Round(transform.position.x * 100 / 16) * 0.16f - 0.08f, Mathf.Round(transform.position.y * 100 / 16) * 0.16f + 0.08f, transform.position.z);
+            // Make sure the scale is set to a whole number only
+            if (transform.localScale.x % 1 != 0 || transform.localScale.y % 1 != 0)
+                transform.localScale = new Vector3(Mathf.Round(transform.localScale.x), Mathf.Round(transform.localScale.y), transform.localScale.z);
 
             // Checks to make sure the user didn't forget to add the 
             // floor prefab that will be used to tile the floor
@@ -28,14 +48,16 @@ namespace TileMapper
                         // The positional value used assumes that this object is anchored at its center
                         GameObject TempObject = Instantiate(m_PrefabToTile,
                             new Vector3(
-                                (transform.position.x - ((transform.localScale.x - 1) * 0.16f) / 2) + i * 0.16f,
-                                (transform.position.y - ((transform.localScale.y - 1) * 0.16f) / 2) + j * 0.16f, 0.0f), 
+                                (transform.position.x + i * 0.16f) + 0.08f,
+                                (transform.position.y - j * 0.16f) - 0.08f, 0.0f),
                             Quaternion.identity) as GameObject;
 
                         TempObject.transform.parent = transform; // Parent the new object to this one for organization reasons
                     }
 
-                m_SpriteRenderer.sprite = null; // Stop displaying this object's sprite since we don't need it anymore
+                // Whenever the game is being run in the editor
+                if (EditorApplication.isPlaying)
+                    m_SpriteRenderer.sprite = null; // Stop displaying this object's sprite since we don't need it anymore
             }
             else
             {
