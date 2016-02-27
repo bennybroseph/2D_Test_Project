@@ -7,7 +7,7 @@ using System.Collections.Generic;
 namespace TileMapper
 {
     [ExecuteInEditMode]
-    class Wall : Tile
+    public class Wall : Tile
     {
         public enum Orientation { TOP, BOTTOM, LEFT, RIGHT, CENTER };
 
@@ -59,8 +59,6 @@ namespace TileMapper
             foreach (Transform child in transform)
                 Children.Add(child.gameObject);
             Children.ForEach(child => DestroyImmediate(child));
-
-            SnapToGrid();
 
             // Checks to make sure the user didn't forget to add the 
             // floor prefab that will be used to tile the floor
@@ -162,7 +160,7 @@ namespace TileMapper
                 }
 
                 if (EditorApplication.isPlaying)
-                    m_SpriteRenderer.sprite = null;
+                    m_SpriteRenderer.enabled = false;
             }
             else
             {

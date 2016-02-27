@@ -5,7 +5,7 @@ using System.Collections.Generic;
 namespace TileMapper
 {
     [ExecuteInEditMode]
-    class Floor : MonoBehaviour
+    public class Floor : Tile
     {
         [SerializeField]
         protected GameObject m_PrefabToTile;
@@ -30,10 +30,7 @@ namespace TileMapper
             foreach (Transform child in transform)
                 Children.Add(child.gameObject);
             Children.ForEach(child => DestroyImmediate(child));
-
-            // Snap to a 16x16 grid automatically
-            if ((transform.position.x - 0.08f) * 100 % 16 != 0 || (transform.position.y + 0.08f) * 100 % 16 != 0)
-                transform.position = new Vector3(Mathf.Round(transform.position.x * 100 / 16) * 0.16f - 0.08f, Mathf.Round(transform.position.y * 100 / 16) * 0.16f + 0.08f, transform.position.z);
+            
             // Make sure the scale is set to a whole number only
             if (transform.localScale.x % 1 != 0 || transform.localScale.y % 1 != 0)
                 transform.localScale = new Vector3(Mathf.Round(transform.localScale.x), Mathf.Round(transform.localScale.y), transform.localScale.z);
@@ -57,7 +54,7 @@ namespace TileMapper
 
                 // Whenever the game is being run in the editor
                 if (EditorApplication.isPlaying)
-                    m_SpriteRenderer.sprite = null; // Stop displaying this object's sprite since we don't need it anymore
+                    m_SpriteRenderer.enabled = false; // Stop displaying this object's sprite since we don't need it anymore
             }
             else
             {
