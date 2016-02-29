@@ -6,14 +6,13 @@ public class Player : TileMapper.Tile
     [SerializeField]
     Rigidbody2D m_Rigidbody;
 
-    protected override void Start()
+    protected override void OnGameStart()
     {
-        base.Start();
-
         m_Rigidbody = GetComponent<Rigidbody2D>();
     }
+
     // Update is called once per frame
-    void Update()
+    protected override void OnGameUpdate()
     {
         if (Input.GetAxisRaw("Horizontal") != 0)
             m_Rigidbody.velocity = new Vector2(Input.GetAxisRaw("Horizontal") * 0.5f, m_Rigidbody.velocity.y);

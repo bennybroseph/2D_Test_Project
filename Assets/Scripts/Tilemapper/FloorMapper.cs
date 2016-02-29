@@ -5,32 +5,37 @@ using System.Collections.Generic;
 namespace TileMapper
 {
     [ExecuteInEditMode]
-    public class Floor : Tile
+    public class FloorMapper : Tile
     {
         [SerializeField]
         protected GameObject m_PrefabToTile;
 
         protected SpriteRenderer m_SpriteRenderer;
 
-        // Used to instantiate the requred objects to fill the space
-        void Update()
+        protected override void Start()
         {
-            if (gameObject == null)
-            {
-                Debug.LogError("This script must be attatched to a game object to function!");
-                return;
-            }
             // Checks to make sure the user didn't forget to add a sprite renderer
             // One is not required, but recommended for error checking
             if ((m_SpriteRenderer = GetComponent<SpriteRenderer>()) == null)
                 Debug.LogWarning(name + " has no sprite renderer!");
 
+            base.Start();
+        }
+        protected override void OnGameStart()
+        {
+            // Whenever the game is being run in the editor
+            if (EditorApplication.isPlaying)
+                m_SpriteRenderer.enabled = false; // Stop displaying this object's sprite since we don't need it anymore
+        }
+        // Used to instantiate the requred objects to fill the space
+        protected override void OnEditorUpdate()
+        {
             // Collect all children, then delete them
             List<GameObject> Children = new List<GameObject>();
             foreach (Transform child in transform)
                 Children.Add(child.gameObject);
             Children.ForEach(child => DestroyImmediate(child));
-            
+
             // Make sure the scale is set to a whole number only
             if (transform.localScale.x % 1 != 0 || transform.localScale.y % 1 != 0)
                 transform.localScale = new Vector3(Mathf.Round(transform.localScale.x), Mathf.Round(transform.localScale.y), transform.localScale.z);
@@ -51,10 +56,6 @@ namespace TileMapper
 
                         TempObject.transform.parent = transform; // Parent the new object to this one for organization reasons
                     }
-
-                // Whenever the game is being run in the editor
-                if (EditorApplication.isPlaying)
-                    m_SpriteRenderer.enabled = false; // Stop displaying this object's sprite since we don't need it anymore
             }
             else
             {
@@ -64,6 +65,8 @@ namespace TileMapper
                 // it is easier to determine which object has an issue
                 m_SpriteRenderer.sprite = Resources.Load<Sprite>("NULL_SPRITE");
                 m_SpriteRenderer.sprite.texture.filterMode = FilterMode.Point;
+
+                m_SpriteRenderer.sprite = Sprite.Create(m_SpriteRenderer.sprite.texture, m_SpriteRenderer.sprite.rect, new Vector2(0, 1));
             }
         }
     }
