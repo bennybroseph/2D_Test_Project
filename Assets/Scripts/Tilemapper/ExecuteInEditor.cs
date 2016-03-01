@@ -19,7 +19,7 @@ namespace TileMapper
         {
             if (EditorApplication.isPlaying)
                 OnGameUpdate();
-            else
+            else if (Selection.activeGameObject != null && (Selection.activeGameObject == gameObject || Selection.activeGameObject.transform.parent == transform))
                 OnEditorUpdate();
         }
         

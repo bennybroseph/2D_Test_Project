@@ -1,11 +1,16 @@
 ﻿using UnityEngine;
 using UnityEditor;
-using System.Collections;
+using System.Collections.Generic;
 
 namespace TileMapper
 {
     public class WallMapper : Tile
     {
+        [SerializeField]
+        protected GameObject m_Anchor;
+        [SerializeField]
+        protected GameObject m_PrefabToTile;
+
         protected SpriteRenderer m_SpriteRenderer;
         protected SpriteRenderer m_ChildSpriteRenderer;
 
@@ -17,11 +22,12 @@ namespace TileMapper
                 Debug.LogWarning(name + " has no sprite renderer!");
 
             if (transform.GetChild(0) != null)
-            {               
+            {
+                m_Anchor = transform.GetChild(0).gameObject;
                 // Checks to make sure the user didn't forget to add a sprite renderer to the anchor
                 // One is not required, but recommended for error checking
-                if ((m_ChildSpriteRenderer = transform.GetChild(0).GetComponent<SpriteRenderer>()) == null)
-                    Debug.LogWarning(transform.GetChild(0).name + " has no sprite renderer!");
+                if ((m_ChildSpriteRenderer = m_Anchor.GetComponent<SpriteRenderer>()) == null)
+                    Debug.LogWarning(m_Anchor.name + " has no sprite renderer!");
             }
             else
                 Debug.LogError(name + " does not have an anchor point!");
@@ -47,35 +53,69 @@ namespace TileMapper
         // Update is called once per frame but only while not in play mode
         protected override void OnEditorUpdate()
         {
-            // When something changes in the editor, start fresh
-            // Not efficient, but will do for now. Try using the Selection class later maybe?
-            // Deletes all children of its child
-            foreach (Transform ChildChild in transform.GetChild(0).transform)
-                DestroyImmediate(ChildChild.gameObject);
+            Controller.SnapToGrid(this);
+            Controller.SnapToGrid(m_Anchor, m_UnitGridSize, Vector3.zero);
 
-            //for(int i = 0; i < Mathf.Round(m_GridSize.x / ))
+            // When something changes in the editor, start fresh
+            // Deletes all children of its child
+            if (Selection.activeGameObject != null && Selection.activeGameObject == gameObject || Selection.activeGameObject.transform.parent == transform)
+            {
+                // Collect all children, then delete them
+                List<GameObject> Children = new List<GameObject>();
+                foreach (Transform Child in m_Anchor.transform)
+                    Children.Add(Child.gameObject);
+                Children.ForEach(child => DestroyImmediate(child));
+
+                // This will be -1 when the anchor is to the left and 1 when it is to the right
+                // This ensures that the walls get put in the correct place
+                float PosCoefficient = (m_Anchor.transform.localPosition.x > 0) ? 1 : -1;
+                for (int i = 0; i <= Mathf.Round(Mathf.Abs(m_Anchor.transform.localPosition.x) / m_UnitGridSize.x); ++i)
+                {
+                    GameObject NewObject = Instantiate(m_PrefabToTile) as GameObject;
+
+                    NewObject.transform.parent = m_Anchor.transform;
+                    NewObject.transform.position = new Vector3(transform.position.x + i * (PosCoefficient * m_UnitGridSize.x), transform.position.y);
+
+                    NewObject = Instantiate(m_PrefabToTile) as GameObject;
+
+                    NewObject.transform.parent = m_Anchor.transform;
+                    NewObject.transform.position = new Vector3(transform.position.x + i * (PosCoefficient * m_UnitGridSize.x), m_Anchor.transform.position.y);
+                }
+                PosCoefficient = (m_Anchor.transform.localPosition.y > 0) ? 1 : -1;
+                for (int i = 1; i < Mathf.Round(Mathf.Abs(m_Anchor.transform.localPosition.y) / m_UnitGridSize.y); ++i)
+                {
+                    GameObject NewObject = Instantiate(m_PrefabToTile) as GameObject;
+
+                    NewObject.transform.parent = m_Anchor.transform;
+                    NewObject.transform.position = new Vector3(transform.position.x, transform.position.y + i * (PosCoefficient * m_UnitGridSize.y));
+
+                    NewObject = Instantiate(m_PrefabToTile) as GameObject;
+
+                    NewObject.transform.parent = m_Anchor.transform;
+                    NewObject.transform.position = new Vector3(m_Anchor.transform.position.x, transform.position.y + i * (PosCoefficient * m_UnitGridSize.y));
+                }
+            }
         }
 
         protected void OnDrawGizmos()
         {
-            // Treat the child object as if it was the parent as far as drawing the Gizmos when selected
-            if (Selection.activeGameObject == transform.GetChild(0).gameObject)
-                OnDrawGizmosSelected();
+            if (Selection.activeGameObject != null)
+            {
+                // Treat the child object as if it was the parent as far as drawing the Gizmos when selected
+                Transform ParentTransform = Selection.activeGameObject.transform.parent;
+                while (ParentTransform != null)
+                {
+                    if (transform == ParentTransform)
+                        OnDrawGizmosSelected();
+                    ParentTransform = ParentTransform.parent;
+                }
+            }
         }
         protected void OnDrawGizmosSelected()
         {
             Gizmos.color = new Color(1.0f, 0.0f, 0.0f, 0.2f);
-            Gizmos.DrawCube(new Vector3(transform.GetChild(0).transform.position.x, transform.position.y), new Vector3(m_GridSize.x / 100.0f, m_GridSize.y / 100.0f));
-            Gizmos.DrawCube(new Vector3(transform.position.x, transform.GetChild(0).transform.position.y), new Vector3(m_GridSize.x / 100.0f, m_GridSize.y / 100.0f));
-        }
-
-        public override void SnapToGrid()
-        {
-            base.SnapToGrid();
-
-            if (m_ShouldSnap)
-                foreach (Transform Child in transform)
-                    Controller.SnapToGrid(Child.gameObject, m_UnitGridSize, m_UnitOffset);
+            Gizmos.DrawCube(new Vector3(transform.GetChild(0).transform.position.x, transform.position.y), new Vector3(m_UnitGridSize.x, m_UnitGridSize.y));
+            Gizmos.DrawCube(new Vector3(transform.position.x, transform.GetChild(0).transform.position.y), new Vector3(m_UnitGridSize.x, m_UnitGridSize.y));
         }
     }
 }

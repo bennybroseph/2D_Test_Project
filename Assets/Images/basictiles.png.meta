@@ -1,13 +1,13 @@
 fileFormatVersion: 2
 guid: d706195c9969bce42a631d486568ecd7
-timeCreated: 1456348183
+timeCreated: 1456770990
 licenseType: Pro
 TextureImporter:
   fileIDToRecycleName:
-    21300000: GrayBrickWall_Center
-    21300002: GrayBrickWall_FillCenter
-    21300004: GrayBrickWall_FillBottom
-    21300006: GrayBrickWall_FillTop
+    21300000: GrayBrickWall_HorizontalEdge
+    21300002: GrayBrickWall_VerticalCenter
+    21300004: GrayBrickWall_HorizontalCenter
+    21300006: GrayBrickWall_VerticalEdge
     21300008: basictiles_4
     21300010: basictiles_5
     21300012: basictiles_6
@@ -150,7 +150,7 @@ TextureImporter:
   buildTargetSettings: []
   spriteSheet:
     sprites:
-    - name: GrayBrickWall_Center
+    - name: GrayBrickWall_HorizontalEdge
       rect:
         serializedVersion: 2
         x: 0
@@ -161,7 +161,7 @@ TextureImporter:
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
-    - name: GrayBrickWall_FillCenter
+    - name: GrayBrickWall_VerticalCenter
       rect:
         serializedVersion: 2
         x: 16
@@ -172,7 +172,7 @@ TextureImporter:
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
-    - name: GrayBrickWall_FillBottom
+    - name: GrayBrickWall_HorizontalCenter
       rect:
         serializedVersion: 2
         x: 32
@@ -183,7 +183,7 @@ TextureImporter:
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
-    - name: GrayBrickWall_FillTop
+    - name: GrayBrickWall_VerticalEdge
       rect:
         serializedVersion: 2
         x: 48

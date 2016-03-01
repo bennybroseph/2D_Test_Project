@@ -18,42 +18,41 @@ namespace TileMapper
         protected Vector4 m_GridColor;
 
         [SerializeField]
-        public Vector3 m_LineOffset;
+        protected Vector3 m_LineOffset;
         [SerializeField]
-        public Vector3 m_LineLength;
+        protected Vector3 m_LineLength;
         [SerializeField]
-        public Vector3 m_LineNum;
-
-        [SerializeField]
-        protected List<Tile> m_Tiles;
+        protected Vector3 m_LineNum;
 
         static private Controller s_Self;
+        [SerializeField]
+        public List<List<Tile>> m_Tiles;
 
         public bool ShowGrid { get { return m_ShowGrid; } }
-        public Vector3 GridSize { get { return m_UnitGridSize; } }
+        public Vector3 GridSize { get { return m_GridSize; } }
         public Vector4 GridColor { get { return m_GridColor; } }
 
         static public Controller Self { get { return s_Self; } }
+
+        static Controller()
+        {
+
+        }
 
         protected override void OnEditorStart()
         {
             while (FindObjectsOfType<Controller>().Length != 1)
                 DestroyImmediate(FindObjectOfType<Controller>());
             s_Self = FindObjectOfType<Controller>();
+
+            s_Self.m_Tiles = new List<List<Tile>>();
         }
         protected override void OnGameStart()
         {
             gameObject.SetActive(false);
         }
 
-        protected override void OnEditorUpdate()
-        {
-            m_Tiles = new List<Tile>();
-            m_Tiles.AddRange(FindObjectsOfType<Tile>());
-
-            foreach (Tile tile in m_Tiles)
-                tile.SnapToGrid();
-        }
+        protected override void OnEditorUpdate(){ }
         protected override void OnGameUpdate() { }
 
         protected virtual void OnDrawGizmos()
@@ -92,6 +91,12 @@ namespace TileMapper
             m_UnitGridSize = new Vector3(m_GridSize.x / 100.0f, m_GridSize.y / 100.0f, m_GridSize.z / 100.0f);
         }
 
+        static public void AddTile(Tile a_Tile)
+        {
+            List<Tile> TempList = new List<Tile>();
+            TempList.Add(a_Tile);
+            s_Self.m_Tiles.Add(TempList);
+        }
         // Easy way to snap a tile object
         static public void SnapToGrid(Tile a_Tile)
         {

@@ -30,6 +30,8 @@ namespace TileMapper
         // Used to instantiate the requred objects to fill the space
         protected override void OnEditorUpdate()
         {
+            Controller.SnapToGrid(this);
+
             // Collect all children, then delete them
             List<GameObject> Children = new List<GameObject>();
             foreach (Transform child in transform)

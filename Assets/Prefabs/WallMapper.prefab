@@ -72,6 +72,8 @@ MonoBehaviour:
   m_ShouldSnap: 1
   m_GridSize: {x: 16, y: 16, z: 0}
   m_Offset: {x: 0, y: 0, z: 0}
+  m_Anchor: {fileID: 186466}
+  m_PrefabToTile: {fileID: 199826, guid: 4da326df05e3e3848aedaaa8c09b9b70, type: 2}
 --- !u!212 &21232756
 SpriteRenderer:
   m_ObjectHideFlags: 1
@@ -138,7 +140,19 @@ Prefab:
   serializedVersion: 2
   m_Modification:
     m_TransformParent: {fileID: 0}
-    m_Modifications: []
+    m_Modifications:
+    - target: {fileID: 0}
+      propertyPath: m_PrefabToTile
+      value: 
+      objectReference: {fileID: 199826, guid: 4da326df05e3e3848aedaaa8c09b9b70, type: 2}
+    - target: {fileID: 0}
+      propertyPath: m_Anchor
+      value: 
+      objectReference: {fileID: 186466}
+    - target: {fileID: 0}
+      propertyPath: m_GridSize.x
+      value: 16
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 0}
   m_RootGameObject: {fileID: 123100}
