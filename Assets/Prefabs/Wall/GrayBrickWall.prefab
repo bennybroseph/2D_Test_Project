@@ -59,9 +59,9 @@ MonoBehaviour:
   m_GridSize: {x: 16, y: 16, z: 0}
   m_Offset: {x: 0, y: 0, z: 0}
   m_HorizontalCenter: {fileID: 21300004, guid: d706195c9969bce42a631d486568ecd7, type: 3}
-  m_HorizontalEdge: {fileID: 0}
+  m_HorizontalEdge: {fileID: 21300000, guid: d706195c9969bce42a631d486568ecd7, type: 3}
   m_VerticalCenter: {fileID: 21300002, guid: d706195c9969bce42a631d486568ecd7, type: 3}
-  m_VerticalEdge: {fileID: 0}
+  m_VerticalEdge: {fileID: 21300006, guid: d706195c9969bce42a631d486568ecd7, type: 3}
 --- !u!212 &21207464
 SpriteRenderer:
   m_ObjectHideFlags: 1

@@ -37,29 +37,21 @@ namespace TileMapper
 
         protected override void OnGameStart()
         {
-            // Whenever the game is being run in the editor
-            if (EditorApplication.isPlaying)
-            {
-                m_SpriteRenderer.enabled = false; // Stop displaying this object's sprite since we don't need it anymore
-                m_ChildSpriteRenderer.enabled = false;
-            }
-        }
-        // Works strangely. Called when the game comes out of play mode
-        protected override void OnEditorStart()
-        {
-
+            m_SpriteRenderer.enabled = false; // Stop displaying this object's sprite since we don't need it anymore
+            m_ChildSpriteRenderer.enabled = false;
         }
 
         // Update is called once per frame but only while not in play mode
-        protected override void OnEditorUpdate()
+        protected override void OnEditorUpdateSelected()
         {
             Controller.SnapToGrid(this);
-            Controller.SnapToGrid(m_Anchor, m_UnitGridSize, Vector3.zero);
 
             // When something changes in the editor, start fresh
             // Deletes all children of its child
-            if (Selection.activeGameObject != null && Selection.activeGameObject == gameObject || Selection.activeGameObject.transform.parent == transform)
+            if (Selection.activeGameObject.transform.parent == transform)
             {
+                Controller.SnapToGrid(m_Anchor, m_UnitGridSize, Vector3.zero);
+
                 // Collect all children, then delete them
                 List<GameObject> Children = new List<GameObject>();
                 foreach (Transform Child in m_Anchor.transform)

@@ -26,33 +26,31 @@ namespace TileMapper
 
         static private Controller s_Self;
         [SerializeField]
-        public List<List<Tile>> m_Tiles;
+        public Tile[,][] m_Tiles;
 
         public bool ShowGrid { get { return m_ShowGrid; } }
         public Vector3 GridSize { get { return m_GridSize; } }
         public Vector4 GridColor { get { return m_GridColor; } }
 
-        static public Controller Self { get { return s_Self; } }
+        static public Controller Self { get { return s_Self; } set { s_Self = value; } }
 
-        static Controller()
-        {
-
-        }
-
-        protected override void OnEditorStart()
-        {
-            while (FindObjectsOfType<Controller>().Length != 1)
-                DestroyImmediate(FindObjectOfType<Controller>());
-            s_Self = FindObjectOfType<Controller>();
-
-            s_Self.m_Tiles = new List<List<Tile>>();
-        }
+        protected override void OnEditorStart() { }
         protected override void OnGameStart()
         {
             gameObject.SetActive(false);
         }
 
-        protected override void OnEditorUpdate(){ }
+        protected override void OnEditorUpdate()
+        {
+            while (FindObjectsOfType<Controller>().Length != 1)
+            {
+                Debug.LogWarning("You cannot have more than one Controller object at a time. Deleted.");
+                DestroyImmediate(FindObjectOfType<Controller>().gameObject);
+            }
+            if (s_Self == null)
+                s_Self = FindObjectOfType<Controller>();
+        }
+        protected override void OnEditorUpdateSelected() { }
         protected override void OnGameUpdate() { }
 
         protected virtual void OnDrawGizmos()
@@ -60,7 +58,7 @@ namespace TileMapper
             if (m_ShowGrid)
             {
                 Vector3 CameraPos = Camera.current.transform.position;
-                
+
                 Vector3 ScaledGridSize = m_UnitGridSize;
                 if (CameraPos.z < -20)
                     ScaledGridSize *= 2 * Mathf.Floor(CameraPos.z / -20);
@@ -91,11 +89,32 @@ namespace TileMapper
             m_UnitGridSize = new Vector3(m_GridSize.x / 100.0f, m_GridSize.y / 100.0f, m_GridSize.z / 100.0f);
         }
 
+        [MenuItem("TileMapper/Create Array")]
+        static public void CreateArray()
+        {
+            List<GameObject> GameObjects = new List<GameObject>();
+
+            GameObjects.AddRange(FindObjectsOfType<GameObject>());
+
+            float HighestX = 0;
+            float LowestX = 0;
+            float HighestY = 0;
+            float LowestY = 0;
+            foreach (GameObject GameObject in GameObjects)
+            {
+                if (GameObject.transform.position.x / s_Self.m_UnitGridSize.x > HighestX)
+                    HighestX = GameObject.transform.position.x / s_Self.m_UnitGridSize.x;
+                if (GameObject.transform.position.x / s_Self.m_UnitGridSize.x < LowestX)
+                    LowestX = GameObject.transform.position.x / s_Self.m_UnitGridSize.x;
+            }
+            Debug.Log(HighestX);
+            Debug.Log(LowestX);
+        }
         static public void AddTile(Tile a_Tile)
         {
-            List<Tile> TempList = new List<Tile>();
-            TempList.Add(a_Tile);
-            s_Self.m_Tiles.Add(TempList);
+            //List<Tile> TempList = new List<Tile>();
+            //TempList.Add(a_Tile);
+            //s_Self.m_Tiles.Add(TempList);
         }
         // Easy way to snap a tile object
         static public void SnapToGrid(Tile a_Tile)
@@ -118,9 +137,9 @@ namespace TileMapper
             {
                 // If the m_Gridsize isn't 0.0f for an axis, then snap it
                 a_Object.transform.position = new Vector3(
-                    (a_GridSize.x != 0.0f) ? Mathf.Round(a_Object.transform.position.x / a_GridSize.x) * a_GridSize.x + a_Offset.x : a_Object.transform.position.x + a_Offset.x,
-                    (a_GridSize.y != 0.0f) ? Mathf.Round(a_Object.transform.position.y / a_GridSize.y) * a_GridSize.y + a_Offset.y : a_Object.transform.position.y + a_Offset.y,
-                    (a_GridSize.z != 0.0f) ? Mathf.Round(a_Object.transform.position.z / a_GridSize.z) * a_GridSize.z + a_Offset.z : a_Object.transform.position.z + a_Offset.z);
+                    (a_GridSize.x != 0.0f) ? Mathf.Round((int)(a_Object.transform.position.x / a_GridSize.x)) * a_GridSize.x + a_Offset.x : a_Object.transform.position.x + a_Offset.x,
+                    (a_GridSize.y != 0.0f) ? Mathf.Round((int)(a_Object.transform.position.y / a_GridSize.y)) * a_GridSize.y + a_Offset.y : a_Object.transform.position.y + a_Offset.y,
+                    (a_GridSize.z != 0.0f) ? Mathf.Round((int)(a_Object.transform.position.z / a_GridSize.z)) * a_GridSize.z + a_Offset.z : a_Object.transform.position.z + a_Offset.z);
             }
         }
     }

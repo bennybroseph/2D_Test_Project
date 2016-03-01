@@ -11,10 +11,17 @@ namespace TileMapperEditor
         {
             DrawDefaultInspector();
             TileMapper.Controller myTarget = (TileMapper.Controller)target;
-            
-            foreach (List<TileMapper.Tile> Tiles in myTarget.m_Tiles)
-                foreach (TileMapper.Tile Tile in Tiles)
-                    EditorGUILayout.TextField(Tile.name);
+
+            EditorGUILayout.BeginHorizontal();
+
+            EditorGUILayout.LabelField("Self", GUILayout.Width(115));
+            TileMapper.Controller.Self = EditorGUILayout.ObjectField(TileMapper.Controller.Self, typeof(TileMapper.Controller), true) as TileMapper.Controller;
+
+            EditorGUILayout.EndHorizontal();
+
+            //foreach (List<TileMapper.Tile> Tiles in myTarget.m_Tiles)
+            //    foreach (TileMapper.Tile Tile in Tiles)
+            //        EditorGUILayout.TextField(Tile.name);
             //myTarget.m_Tiles = EditorGUILayout.IntField("Experience", myTarget.experience);
             //EditorGUILayout.LabelField("Level", myTarget.Level.ToString());
         }

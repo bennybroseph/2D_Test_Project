@@ -46,8 +46,9 @@ namespace TileMapper
         // but then everything that inherits would need to implement these functions
         // and I don't think that's necessary. Plus an object may need to be
         // created of type Tile, and this is not possible on an abstract class
-        protected override void OnEditorStart() { Controller.SnapToGrid(this); Controller.AddTile(this); }
-        protected override void OnEditorUpdate() { Controller.SnapToGrid(this); }
+        protected override void OnEditorStart() { }
+        protected override void OnEditorUpdate() { }
+        protected override void OnEditorUpdateSelected() { Controller.SnapToGrid(this); }
         protected override void OnGameStart() { }
         protected override void OnGameUpdate() { }
     }

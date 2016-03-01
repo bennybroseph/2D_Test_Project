@@ -23,12 +23,10 @@ namespace TileMapper
         }
         protected override void OnGameStart()
         {
-            // Whenever the game is being run in the editor
-            if (EditorApplication.isPlaying)
-                m_SpriteRenderer.enabled = false; // Stop displaying this object's sprite since we don't need it anymore
+            m_SpriteRenderer.enabled = false; // Stop displaying this object's sprite since we don't need it anymore
         }
         // Used to instantiate the requred objects to fill the space
-        protected override void OnEditorUpdate()
+        protected override void OnEditorUpdateSelected()
         {
             Controller.SnapToGrid(this);
 

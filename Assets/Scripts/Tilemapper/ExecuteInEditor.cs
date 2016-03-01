@@ -20,11 +20,14 @@ namespace TileMapper
             if (EditorApplication.isPlaying)
                 OnGameUpdate();
             else if (Selection.activeGameObject != null && (Selection.activeGameObject == gameObject || Selection.activeGameObject.transform.parent == transform))
+                OnEditorUpdateSelected();
+            else
                 OnEditorUpdate();
         }
         
         abstract protected void OnEditorStart();
         abstract protected void OnEditorUpdate();
+        abstract protected void OnEditorUpdateSelected();
         abstract protected void OnGameStart();
         abstract protected void OnGameUpdate();
     }

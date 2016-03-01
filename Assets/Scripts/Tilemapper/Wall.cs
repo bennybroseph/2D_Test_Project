@@ -19,7 +19,7 @@ public class Wall : TileMapper.Tile
             Debug.LogError(name + " is missing a sprite!");
     }
 
-    protected override void OnEditorUpdate()
+    protected override void OnEditorUpdateSelected()
     {
         TileMapper.Controller.SnapToGrid(this);
     }
