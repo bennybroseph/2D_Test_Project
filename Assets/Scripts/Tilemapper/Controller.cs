@@ -25,14 +25,15 @@ namespace TileMapper
         protected Vector3 m_LineNum;
 
         static private Controller s_Self;
-        [SerializeField]
-        public Tile[,][] m_Tiles;
+        static private List<GameObject>[,] s_Tiles;
+        static private Vector2 s_ArraySize;
 
         public bool ShowGrid { get { return m_ShowGrid; } }
         public Vector3 GridSize { get { return m_GridSize; } }
         public Vector4 GridColor { get { return m_GridColor; } }
 
         static public Controller Self { get { return s_Self; } set { s_Self = value; } }
+        static public List<GameObject>[,] Tiles { get { return s_Tiles; } }
 
         protected override void OnEditorStart() { }
         protected override void OnGameStart()
@@ -75,6 +76,8 @@ namespace TileMapper
                 for (int i = 0; i < 5 + Mathf.Abs(CameraPos.z) * m_LineNum.y; ++i)
                     Gizmos.DrawLine(new Vector3(Start.x, Start.y + i * ScaledGridSize.y), new Vector3(End.x, Start.y + i * ScaledGridSize.y));
             }
+
+            //Debug.Log(mousePosInScene);
         }
 
         protected virtual void OnValidate()
@@ -94,21 +97,43 @@ namespace TileMapper
         {
             List<GameObject> GameObjects = new List<GameObject>();
 
-            GameObjects.AddRange(FindObjectsOfType<GameObject>());
+            GameObjects.AddRange(GameObject.FindGameObjectsWithTag("GameTile"));
 
-            float HighestX = 0;
-            float LowestX = 0;
-            float HighestY = 0;
-            float LowestY = 0;
-            foreach (GameObject GameObject in GameObjects)
+            int HighestX = 0;
+            int LowestX = 0;
+            int HighestY = 0;
+            int LowestY = 0;
+            foreach (GameObject gameObject in GameObjects)
             {
-                if (GameObject.transform.position.x / s_Self.m_UnitGridSize.x > HighestX)
-                    HighestX = GameObject.transform.position.x / s_Self.m_UnitGridSize.x;
-                if (GameObject.transform.position.x / s_Self.m_UnitGridSize.x < LowestX)
-                    LowestX = GameObject.transform.position.x / s_Self.m_UnitGridSize.x;
+                if (gameObject.transform.position.x / s_Self.m_UnitGridSize.x > HighestX)
+                    HighestX = (int)(gameObject.transform.position.x / s_Self.m_UnitGridSize.x);
+                if (gameObject.transform.position.x / s_Self.m_UnitGridSize.x < LowestX)
+                    LowestX = (int)(gameObject.transform.position.x / s_Self.m_UnitGridSize.x);
+                if (gameObject.transform.position.y / s_Self.m_UnitGridSize.y > HighestY)
+                    HighestY = (int)(gameObject.transform.position.y / s_Self.m_UnitGridSize.y);
+                if (gameObject.transform.position.y / s_Self.m_UnitGridSize.y < LowestY)
+                    LowestY = (int)(gameObject.transform.position.y / s_Self.m_UnitGridSize.y);
             }
-            Debug.Log(HighestX);
-            Debug.Log(LowestX);
+            s_Tiles = new List<GameObject>[HighestX + Math.Abs(LowestX) + 1, HighestY + Math.Abs(LowestY) + 1];
+
+            for (int i = 0; i < s_Tiles.GetLength(0); ++i)
+                for (int j = 0; j < s_Tiles.GetLength(1); ++j)
+                    s_Tiles[i, j] = new List<GameObject>();
+
+            for (int i = 0; i < GameObjects.Count; ++i)
+            {
+                int j = (int)(GameObjects[i].transform.position.x / s_Self.m_UnitGridSize.x) + Math.Abs(LowestX);
+                int k = (int)(GameObjects[i].transform.position.y / s_Self.m_UnitGridSize.y) + Math.Abs(LowestY);
+
+                //Debug.Log(j);
+                //Debug.Log(k);
+
+                s_Tiles[j, k].Add(GameObjects[i]);
+            }
+
+            //s_Tiles = new Tile[(int)(HighestX + Mathf.Abs(LowestX)), (int)(HighestY + Mathf.Abs(LowestY))][];
+
+            //Debug.Log(s_Tiles.GetLength(1));
         }
         static public void AddTile(Tile a_Tile)
         {
@@ -131,15 +156,18 @@ namespace TileMapper
         static public void SnapToGrid(GameObject a_Object, Vector3 a_GridSize, Vector3 a_Offset)
         {
             // Determine whether the object is currently snapped
-            if (a_Object.transform.position.x % (a_GridSize.x + a_Offset.x) != 0 ||
-                a_Object.transform.position.y % (a_GridSize.y + a_Offset.y) != 0 ||
-                a_Object.transform.position.z % (a_GridSize.z + a_Offset.z) != 0)
+            if ((a_Object.transform.position.x + a_Offset.x) % a_GridSize.x != 0 ||
+                (a_Object.transform.position.y + a_Offset.y) % a_GridSize.y != 0 ||
+                (a_Object.transform.position.z + a_Offset.z) % a_GridSize.z != 0)
             {
                 // If the m_Gridsize isn't 0.0f for an axis, then snap it
                 a_Object.transform.position = new Vector3(
-                    (a_GridSize.x != 0.0f) ? Mathf.Round((int)(a_Object.transform.position.x / a_GridSize.x)) * a_GridSize.x + a_Offset.x : a_Object.transform.position.x + a_Offset.x,
-                    (a_GridSize.y != 0.0f) ? Mathf.Round((int)(a_Object.transform.position.y / a_GridSize.y)) * a_GridSize.y + a_Offset.y : a_Object.transform.position.y + a_Offset.y,
-                    (a_GridSize.z != 0.0f) ? Mathf.Round((int)(a_Object.transform.position.z / a_GridSize.z)) * a_GridSize.z + a_Offset.z : a_Object.transform.position.z + a_Offset.z);
+                    (a_GridSize.x != 0.0f) ?
+                        (int)((a_Object.transform.position.x - a_Offset.x + ((a_Object.transform.position.x > 0) ? a_GridSize.x / 2.0f : a_GridSize.x / -2.0f)) / a_GridSize.x) * a_GridSize.x + a_Offset.x : a_Object.transform.position.x + a_Offset.x,
+                    (a_GridSize.y != 0.0f) ?
+                        (int)((a_Object.transform.position.y - a_Offset.x + ((a_Object.transform.position.y > 0) ? a_GridSize.y / 2.0f : a_GridSize.y / -2.0f)) / a_GridSize.y) * a_GridSize.y + a_Offset.y : a_Object.transform.position.y + a_Offset.y,
+                    (a_GridSize.z != 0.0f) ?
+                        (int)((a_Object.transform.position.z - a_Offset.x + ((a_Object.transform.position.z > 0) ? a_GridSize.z / 2.0f : a_GridSize.z / -2.0f)) / a_GridSize.z) * a_GridSize.z + a_Offset.z : a_Object.transform.position.z + a_Offset.z);
             }
         }
     }
