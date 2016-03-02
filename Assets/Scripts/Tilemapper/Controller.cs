@@ -26,7 +26,7 @@ namespace TileMapper
 
         static private Controller s_Self;
         static private List<GameObject>[,] s_Tiles;
-        static private Vector2 s_ArraySize;
+        static private Vector2 s_IndexOffset;
 
         public bool ShowGrid { get { return m_ShowGrid; } }
         public Vector3 GridSize { get { return m_GridSize; } }
@@ -120,27 +120,39 @@ namespace TileMapper
                 for (int j = 0; j < s_Tiles.GetLength(1); ++j)
                     s_Tiles[i, j] = new List<GameObject>();
 
+            s_IndexOffset = new Vector2(Mathf.Abs(LowestX), Mathf.Abs(LowestY));
             for (int i = 0; i < GameObjects.Count; ++i)
             {
-                int j = (int)(GameObjects[i].transform.position.x / s_Self.m_UnitGridSize.x) + Math.Abs(LowestX);
-                int k = (int)(GameObjects[i].transform.position.y / s_Self.m_UnitGridSize.y) + Math.Abs(LowestY);
-
-                //Debug.Log(j);
-                //Debug.Log(k);
+                int j = (int)Mathf.Round(GameObjects[i].transform.position.x / s_Self.m_UnitGridSize.x) + (int)s_IndexOffset.x;
+                int k = (int)Mathf.Round(GameObjects[i].transform.position.y / s_Self.m_UnitGridSize.y) + (int)s_IndexOffset.y;
 
                 s_Tiles[j, k].Add(GameObjects[i]);
             }
-
-            //s_Tiles = new Tile[(int)(HighestX + Mathf.Abs(LowestX)), (int)(HighestY + Mathf.Abs(LowestY))][];
-
-            //Debug.Log(s_Tiles.GetLength(1));
         }
+        static public Vector2 ConvertToIndex(Vector3 a_Pos)
+        {
+            return new Vector2(
+                Mathf.Round(a_Pos.x / s_Self.m_UnitGridSize.x) + s_IndexOffset.x,
+                Mathf.Round(a_Pos.y / s_Self.m_UnitGridSize.y) + s_IndexOffset.y);
+        }
+
         static public void AddTile(Tile a_Tile)
         {
-            //List<Tile> TempList = new List<Tile>();
-            //TempList.Add(a_Tile);
-            //s_Self.m_Tiles.Add(TempList);
+            s_Tiles[(int)a_Tile.TileIndex.x, (int)a_Tile.TileIndex.y].Add(a_Tile.gameObject);
         }
+        static public void AddTile(GameObject a_Object, Vector2 a_Index)
+        {
+            s_Tiles[(int)a_Index.x, (int)a_Index.y].Add(a_Object);
+        }
+        static public void RemoveTile(Tile a_Tile)
+        {
+            s_Tiles[(int)a_Tile.TileIndex.x, (int)a_Tile.TileIndex.y].Remove(a_Tile.gameObject);
+        }
+        static public void RemoveTile(GameObject a_Object, Vector2 a_Index)
+        {
+            s_Tiles[(int)a_Index.x, (int)a_Index.y].Remove(a_Object);
+        }
+
         // Easy way to snap a tile object
         static public void SnapToGrid(Tile a_Tile)
         {
@@ -168,6 +180,13 @@ namespace TileMapper
                         (int)((a_Object.transform.position.y - a_Offset.x + ((a_Object.transform.position.y > 0) ? a_GridSize.y / 2.0f : a_GridSize.y / -2.0f)) / a_GridSize.y) * a_GridSize.y + a_Offset.y : a_Object.transform.position.y + a_Offset.y,
                     (a_GridSize.z != 0.0f) ?
                         (int)((a_Object.transform.position.z - a_Offset.x + ((a_Object.transform.position.z > 0) ? a_GridSize.z / 2.0f : a_GridSize.z / -2.0f)) / a_GridSize.z) * a_GridSize.z + a_Offset.z : a_Object.transform.position.z + a_Offset.z);
+
+                // Avoid floating point error. Unnecessary in some cases, but for the most part having 0.080000001 is unacceptable
+                // Converts something like that to 0.08, which is correct.                        
+                a_Object.transform.position = new Vector3(
+                            Convert.ToInt32(a_Object.transform.position.x * 100.0f) / 100.0f,
+                            Convert.ToInt32(a_Object.transform.position.y * 100.0f) / 100.0f,
+                            Convert.ToInt32(a_Object.transform.position.z * 100.0f) / 100.0f);
             }
         }
     }

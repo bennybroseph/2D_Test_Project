@@ -15,6 +15,8 @@ namespace TileMapper
         protected Vector3 m_GridSize;
         // The grid size in Unity units
         protected Vector3 m_UnitGridSize;
+        [SerializeField, ReadOnly, Tooltip("The index of the tile in the static s_Tiles array of TileMapper.Controller\nCannot be edited, but is shown")]
+        protected Vector2 m_TileIndex;
         [SerializeField, Tooltip("After snapping to the grid, the values in this variable will be added on to its current position\n\nValues are in PIXELS not units, because units are confusing in pixel based games\n1 unit = 100 pixels")]
         protected Vector3 m_Offset;
         // The offset in Unity units
@@ -22,6 +24,7 @@ namespace TileMapper
 
         public bool ShouldSnap { get { return m_ShouldSnap; } }
         public Vector3 GridSize { get { return m_UnitGridSize; } }
+        public Vector2 TileIndex { get { return m_TileIndex; } }
         public Vector3 Offset { get { return m_UnitOffset; } }
 
         protected virtual void OnValidate()

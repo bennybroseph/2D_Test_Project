@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using UnityEditor;
 using System.Collections.Generic;
+using System;
 
 namespace TileMapper
 {
@@ -55,6 +56,13 @@ namespace TileMapper
                             Quaternion.identity) as GameObject;
 
                         TempObject.transform.parent = transform; // Parent the new object to this one for organization reasons
+
+                        // Avoid floating point error. Unnecessary in some cases, but for the most part having 0.080000001 is unacceptable
+                        // Converts something like that to 0.08, which is correct.                        
+                        TempObject.transform.position = new Vector3(
+                            Convert.ToInt32(TempObject.transform.position.x * 100.0f) / 100.0f,
+                            Convert.ToInt32(TempObject.transform.position.y * 100.0f) / 100.0f,
+                            Convert.ToInt32(TempObject.transform.position.z * 100.0f) / 100.0f);
                     }
             }
             else
