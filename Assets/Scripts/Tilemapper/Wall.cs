@@ -26,17 +26,17 @@ public class Wall : Tile
 
     protected override void OnEditorUpdate()
     {
-        m_TileIndex = Controller.ConvertToIndex(transform.position);
+        //m_TileIndex = Controller.ConvertToIndex(transform.position);
 
-        foreach(GameObject other in Controller.Tiles[(int)m_TileIndex.x, (int)m_TileIndex.y])
-        {
-            if (other != gameObject && other.GetComponent<Wall>() != null)
-                DestroyImmediate(other);
-        }
+        //foreach (GameObject other in Controller.Tiles[(int)m_TileIndex.x, (int)m_TileIndex.y])
+        //{
+        //    if (other != null &&other != gameObject && other.GetComponent<Wall>() != null)
+        //        DestroyImmediate(other);
+        //}
     }
     protected override void OnEditorUpdateSelected()
     {
-        TileMapper.Controller.SnapToGrid(this);
+        Controller.SnapToGrid(this);
     }
     // Update is called once per frame while the game is running
     protected override void OnGameUpdate()
@@ -45,6 +45,6 @@ public class Wall : Tile
     }
     protected virtual void OnDestroy()
     {
-        Controller.RemoveTile(this);
+        //Controller.RemoveTile(this);
     }
 }

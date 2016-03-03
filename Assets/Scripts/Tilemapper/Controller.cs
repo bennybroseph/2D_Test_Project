@@ -136,13 +136,13 @@ namespace TileMapper
                 Mathf.Round(a_Pos.y / s_Self.m_UnitGridSize.y) + s_IndexOffset.y);
         }
 
-        static public void AddTile(Tile a_Tile)
+        static public void AddTile(ref Tile a_Tile)
         {
             s_Tiles[(int)a_Tile.TileIndex.x, (int)a_Tile.TileIndex.y].Add(a_Tile.gameObject);
         }
-        static public void AddTile(GameObject a_Object, Vector2 a_Index)
+        static public void AddTile(ref GameObject a_Object, Vector2 a_Index)
         {
-            s_Tiles[(int)a_Index.x, (int)a_Index.y].Add(a_Object);
+            s_Tiles[(int)a_Index.x, (int)a_Index.y].Add(a_Object.gameObject);
         }
         static public void RemoveTile(Tile a_Tile)
         {
@@ -150,7 +150,7 @@ namespace TileMapper
         }
         static public void RemoveTile(GameObject a_Object, Vector2 a_Index)
         {
-            s_Tiles[(int)a_Index.x, (int)a_Index.y].Remove(a_Object);
+            s_Tiles[(int)a_Index.x, (int)a_Index.y].Remove(a_Object.gameObject);
         }
 
         // Easy way to snap a tile object
@@ -183,10 +183,10 @@ namespace TileMapper
 
                 // Avoid floating point error. Unnecessary in some cases, but for the most part having 0.080000001 is unacceptable
                 // Converts something like that to 0.08, which is correct.                        
-                a_Object.transform.position = new Vector3(
-                            Convert.ToInt32(a_Object.transform.position.x * 100.0f) / 100.0f,
-                            Convert.ToInt32(a_Object.transform.position.y * 100.0f) / 100.0f,
-                            Convert.ToInt32(a_Object.transform.position.z * 100.0f) / 100.0f);
+                a_Object.transform.localPosition = new Vector3(
+                            Mathf.Floor(a_Object.transform.localPosition.x * 100.0f) / 100.0f,
+                            Mathf.Floor(a_Object.transform.localPosition.y * 100.0f) / 100.0f,
+                            Mathf.Floor(a_Object.transform.localPosition.z * 100.0f) / 100.0f);
             }
         }
     }
