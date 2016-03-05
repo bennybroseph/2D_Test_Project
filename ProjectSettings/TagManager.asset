@@ -48,6 +48,9 @@ TagManager:
   - name: FloorMask
     uniqueID: 645872849
     locked: 0
+  - name: Player
+    uniqueID: 997745139
+    locked: 0
   - name: Wall
     uniqueID: 3917729359
     locked: 0

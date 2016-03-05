@@ -8,8 +8,12 @@ namespace TileMapper
     [ExecuteInEditMode]
     abstract public class ExecuteInEditor : MonoBehaviour
     {
+        protected bool m_EditorCompiling;
+
         protected virtual void Start()
         {
+            m_EditorCompiling = false;
+
             if (EditorApplication.isPlaying)
                 OnGameStart();
             else
@@ -19,6 +23,13 @@ namespace TileMapper
         {
             if (EditorApplication.isPlaying)
                 OnGameUpdate();
+            else if (EditorApplication.isCompiling && !m_EditorCompiling)
+                m_EditorCompiling = true;
+            else if (m_EditorCompiling)
+            {
+                m_EditorCompiling = false;
+                OnEditorStart();
+            }
             else if (Selection.activeGameObject != null && (Selection.activeGameObject == gameObject || Selection.activeGameObject.transform.parent == transform))
                 OnEditorUpdateSelected();
             else

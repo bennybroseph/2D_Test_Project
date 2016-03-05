@@ -21,7 +21,7 @@ public class Wall : Tile
         if ((m_SpriteRenderer = GetComponent<SpriteRenderer>()) == null)
             Debug.LogError(name + " has no sprite renderer!");
         if (m_HorizontalCenter == null || m_HorizontalEdge == null || m_VerticalCenter == null || m_VerticalEdge == null)
-            Debug.LogError(name + " is missing a sprite!");
+            Debug.LogError(name + " is missing a sprite!"); Debug.Log("Update");
     }
 
     protected override void OnEditorUpdate()
@@ -36,7 +36,7 @@ public class Wall : Tile
     }
     protected override void OnEditorUpdateSelected()
     {
-        Controller.SnapToGrid(this);
+        Controller.SnapToGrid(this); Debug.Log("Update");
     }
     // Update is called once per frame while the game is running
     protected override void OnGameUpdate()

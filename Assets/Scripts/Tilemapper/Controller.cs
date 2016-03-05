@@ -29,19 +29,13 @@ namespace TileMapper
         static private Vector2 s_IndexOffset;
 
         public bool ShowGrid { get { return m_ShowGrid; } }
-        public Vector3 GridSize { get { return m_GridSize; } }
+        public Vector3 GridSize { get { return m_UnitGridSize; } }
         public Vector4 GridColor { get { return m_GridColor; } }
 
         static public Controller Self { get { return s_Self; } set { s_Self = value; } }
         static public List<GameObject>[,] Tiles { get { return s_Tiles; } }
 
-        protected override void OnEditorStart() { }
-        protected override void OnGameStart()
-        {
-            gameObject.SetActive(false);
-        }
-
-        protected override void OnEditorUpdate()
+        protected override void OnEditorStart()
         {
             while (FindObjectsOfType<Controller>().Length != 1)
             {
@@ -50,7 +44,15 @@ namespace TileMapper
             }
             if (s_Self == null)
                 s_Self = FindObjectOfType<Controller>();
+
+            CreateArray();
         }
+        protected override void OnGameStart()
+        {
+            gameObject.SetActive(false);
+        }
+
+        protected override void OnEditorUpdate() { }
         protected override void OnEditorUpdateSelected() { }
         protected override void OnGameUpdate() { }
 
@@ -76,8 +78,6 @@ namespace TileMapper
                 for (int i = 0; i < 5 + Mathf.Abs(CameraPos.z) * m_LineNum.y; ++i)
                     Gizmos.DrawLine(new Vector3(Start.x, Start.y + i * ScaledGridSize.y), new Vector3(End.x, Start.y + i * ScaledGridSize.y));
             }
-
-            //Debug.Log(mousePosInScene);
         }
 
         protected virtual void OnValidate()
@@ -96,44 +96,58 @@ namespace TileMapper
         static public void CreateArray()
         {
             List<GameObject> GameObjects = new List<GameObject>();
+            s_IndexOffset = Vector2.zero;
 
             GameObjects.AddRange(GameObject.FindGameObjectsWithTag("GameTile"));
 
-            int HighestX = 0;
-            int LowestX = 0;
-            int HighestY = 0;
-            int LowestY = 0;
+            int HighestX = 0, LowestX = 0;
+            int HighestY = 0, LowestY = 0;
             foreach (GameObject gameObject in GameObjects)
             {
-                if (gameObject.transform.position.x / s_Self.m_UnitGridSize.x > HighestX)
-                    HighestX = (int)(gameObject.transform.position.x / s_Self.m_UnitGridSize.x);
-                if (gameObject.transform.position.x / s_Self.m_UnitGridSize.x < LowestX)
-                    LowestX = (int)(gameObject.transform.position.x / s_Self.m_UnitGridSize.x);
-                if (gameObject.transform.position.y / s_Self.m_UnitGridSize.y > HighestY)
-                    HighestY = (int)(gameObject.transform.position.y / s_Self.m_UnitGridSize.y);
-                if (gameObject.transform.position.y / s_Self.m_UnitGridSize.y < LowestY)
-                    LowestY = (int)(gameObject.transform.position.y / s_Self.m_UnitGridSize.y);
+                Vector3 ObjectGridPosition = GetGridPosition(gameObject.transform.position);
+
+                if ((int)ObjectGridPosition.x > HighestX)
+                    HighestX = (int)ObjectGridPosition.x;
+                if ((int)ObjectGridPosition.x < LowestX)
+                    LowestX  = (int)ObjectGridPosition.x;
+                if ((int)ObjectGridPosition.y > HighestY)
+                    HighestY = (int)ObjectGridPosition.y;
+                if ((int)ObjectGridPosition.y < LowestY)
+                    LowestY  = (int)ObjectGridPosition.y;
             }
-            s_Tiles = new List<GameObject>[HighestX + Math.Abs(LowestX) + 1, HighestY + Math.Abs(LowestY) + 1];
+            s_Tiles = new List<GameObject>[Math.Abs(HighestX) + Math.Abs(LowestX) + 1, Math.Abs(HighestY) + Math.Abs(LowestY) + 1];
 
             for (int i = 0; i < s_Tiles.GetLength(0); ++i)
                 for (int j = 0; j < s_Tiles.GetLength(1); ++j)
                     s_Tiles[i, j] = new List<GameObject>();
 
-            s_IndexOffset = new Vector2(Mathf.Abs(LowestX), Mathf.Abs(LowestY));
+            
+            s_IndexOffset = new Vector2(LowestX, LowestY);
+
             for (int i = 0; i < GameObjects.Count; ++i)
             {
-                int j = (int)Mathf.Round(GameObjects[i].transform.position.x / s_Self.m_UnitGridSize.x) + (int)s_IndexOffset.x;
-                int k = (int)Mathf.Round(GameObjects[i].transform.position.y / s_Self.m_UnitGridSize.y) + (int)s_IndexOffset.y;
+                Vector2 ObjectArrayIndex = GetArrayIndex(GameObjects[i]);                
 
-                s_Tiles[j, k].Add(GameObjects[i]);
+                s_Tiles[(int)ObjectArrayIndex.x, (int)ObjectArrayIndex.y].Add(GameObjects[i]);
             }
         }
-        static public Vector2 ConvertToIndex(Vector3 a_Pos)
+
+        static public Vector2 GetArrayIndex(GameObject a_Object)
         {
+            if (a_Object.GetComponent<Tile>() != null)
+                return GetArrayIndex(a_Object.transform.position, a_Object.GetComponent<Tile>().GridSize, a_Object.GetComponent<Tile>().Offset);
+            else
+                return GetArrayIndex(a_Object.transform.position, s_Self.m_UnitGridSize, Vector3.zero);
+
+        }
+        static public Vector2 GetArrayIndex(Vector3 a_Pos, Vector3 a_GridSize, Vector3 a_Offset)
+        {
+            Vector2 GridPosition = GetGridPosition(a_Pos, a_GridSize, a_Offset); 
+
             return new Vector2(
-                Mathf.Round(a_Pos.x / s_Self.m_UnitGridSize.x) + s_IndexOffset.x,
-                Mathf.Round(a_Pos.y / s_Self.m_UnitGridSize.y) + s_IndexOffset.y);
+                GridPosition.x - s_IndexOffset.x,
+                GridPosition.y - s_IndexOffset.y);
+
         }
 
         static public void AddTile(ref Tile a_Tile)
@@ -153,6 +167,27 @@ namespace TileMapper
             s_Tiles[(int)a_Index.x, (int)a_Index.y].Remove(a_Object.gameObject);
         }
 
+        static public Vector3 GetGridPosition(Vector3 a_Position)
+        {
+            return GetGridPosition(a_Position, s_Self.m_UnitGridSize, Vector3.zero);
+        }
+        static public Vector3 GetGridPosition(Vector3 a_Position, Vector3 a_GridSize, Vector3 a_Offset)
+        {
+            // If the a_Gridsize isn't 0.0f for an axis, then snap it
+            // The first ternary operator (? :) is to prevent division by 0
+            // The second one makes its position in the grid based on its center 
+            //ex. a position of (0.17, 0, 0) is (1, 0, 0) in grid space not (2, 0, 0) 
+            return new Vector3(
+                    (a_GridSize.x != 0.0f) ?
+                        (int)((a_Position.x - a_Offset.x + ((a_Position.x > 0) ? a_GridSize.x / 2.0f : a_GridSize.x / -2.0f)) / a_GridSize.x) :
+                        a_Position.x,
+                    (a_GridSize.y != 0.0f) ?
+                        (int)((a_Position.y - a_Offset.x + ((a_Position.y > 0) ? a_GridSize.y / 2.0f : a_GridSize.y / -2.0f)) / a_GridSize.y) :
+                        a_Position.y,
+                    (a_GridSize.z != 0.0f) ?
+                        (int)((a_Position.z - a_Offset.x + ((a_Position.z > 0) ? a_GridSize.z / 2.0f : a_GridSize.z / -2.0f)) / a_GridSize.z) :
+                        a_Position.z);
+        }
         // Easy way to snap a tile object
         static public void SnapToGrid(Tile a_Tile)
         {
@@ -162,9 +197,9 @@ namespace TileMapper
         // Allows snapping based on the Editor grid. Useful, but uses some bad singleton code
         static public void SnapToGrid(GameObject a_Object)
         {
-            SnapToGrid(a_Object, s_Self.m_GridSize, new Vector3(0, 0, 0));
+            SnapToGrid(a_Object, s_Self.m_UnitGridSize, Vector3.zero);
         }
-        // Useful to keep a snap function outside of the Tile object so that anything can snap to the grid, not just tiles should it be desired
+        // Useful to keep a snap function outside of the Tile object so that any GameObject can snap to the grid, not just Tile objects should it be desired
         static public void SnapToGrid(GameObject a_Object, Vector3 a_GridSize, Vector3 a_Offset)
         {
             // Determine whether the object is currently snapped
@@ -172,21 +207,29 @@ namespace TileMapper
                 (a_Object.transform.position.y + a_Offset.y) % a_GridSize.y != 0 ||
                 (a_Object.transform.position.z + a_Offset.z) % a_GridSize.z != 0)
             {
-                // If the m_Gridsize isn't 0.0f for an axis, then snap it
+                // Get the object's position in the grid space
+                a_Object.transform.position = GetGridPosition(a_Object.transform.position, a_GridSize, a_Offset);
+
+                // This takes it's position on the grid and translates it into a world position
+                // ex. (2, 1, 0) = (0.32f, 0.16f, 0) if the grid size is 0.16f
+                // The ternary operator is to prevent any change when the grid size for a given axis is 0.0f
                 a_Object.transform.position = new Vector3(
                     (a_GridSize.x != 0.0f) ?
-                        (int)((a_Object.transform.position.x - a_Offset.x + ((a_Object.transform.position.x > 0) ? a_GridSize.x / 2.0f : a_GridSize.x / -2.0f)) / a_GridSize.x) * a_GridSize.x + a_Offset.x : a_Object.transform.position.x + a_Offset.x,
+                        a_Object.transform.position.x * a_GridSize.x + a_Offset.x :
+                        a_Object.transform.position.x + a_Offset.x,
                     (a_GridSize.y != 0.0f) ?
-                        (int)((a_Object.transform.position.y - a_Offset.x + ((a_Object.transform.position.y > 0) ? a_GridSize.y / 2.0f : a_GridSize.y / -2.0f)) / a_GridSize.y) * a_GridSize.y + a_Offset.y : a_Object.transform.position.y + a_Offset.y,
+                        a_Object.transform.position.y * a_GridSize.y + a_Offset.y :
+                        a_Object.transform.position.y + a_Offset.y,
                     (a_GridSize.z != 0.0f) ?
-                        (int)((a_Object.transform.position.z - a_Offset.x + ((a_Object.transform.position.z > 0) ? a_GridSize.z / 2.0f : a_GridSize.z / -2.0f)) / a_GridSize.z) * a_GridSize.z + a_Offset.z : a_Object.transform.position.z + a_Offset.z);
+                        a_Object.transform.position.z * a_GridSize.z + a_Offset.z :
+                        a_Object.transform.position.z + a_Offset.z);
 
-                // Avoid floating point error. Unnecessary in some cases, but for the most part having 0.080000001 is unacceptable
-                // Converts something like that to 0.08, which is correct.                        
-                a_Object.transform.localPosition = new Vector3(
-                            Mathf.Floor(a_Object.transform.localPosition.x * 100.0f) / 100.0f,
-                            Mathf.Floor(a_Object.transform.localPosition.y * 100.0f) / 100.0f,
-                            Mathf.Floor(a_Object.transform.localPosition.z * 100.0f) / 100.0f);
+                //Avoid floating point error. Unnecessary in some cases, but for the most part having 0.080000001 is unacceptable
+                //Converts something like that to 0.08, which is correct.
+                //a_Object.transform.position = new Vector3(
+                //    (int)(a_Object.transform.position.x * 100.0f) / 100.0f,
+                //    (int)(a_Object.transform.position.y * 100.0f) / 100.0f,
+                //    (int)(a_Object.transform.position.z * 100.0f) / 100.0f);
             }
         }
     }
