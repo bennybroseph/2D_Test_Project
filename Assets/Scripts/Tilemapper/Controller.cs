@@ -1,8 +1,11 @@
 ﻿using UnityEngine;
 using UnityEditor;
+using UnityEditorInternal;
+using System;
+using System.Reflection;
 using System.Linq;
 using System.Collections.Generic;
-using System;
+
 
 namespace TileMapper
 {
@@ -14,7 +17,7 @@ namespace TileMapper
         protected Vector3 m_GridSize;
         // The grid size in Unity units
         protected Vector3 m_UnitGridSize;
-        [SerializeField]
+        [SerializeField, Tooltip("The color of the grid\nAcceptable range is 0-1 using floating point numbers")]
         protected Vector4 m_GridColor;
 
         [SerializeField]
@@ -28,12 +31,16 @@ namespace TileMapper
         static private List<GameObject>[,] s_Tiles;
         static private Vector2 s_IndexOffset;
 
+        static private List<string> s_SortingLayers;
+
         public bool ShowGrid { get { return m_ShowGrid; } }
+        public Vector3 PixelGridSize { get { return m_GridSize; } }
         public Vector3 GridSize { get { return m_UnitGridSize; } }
         public Vector4 GridColor { get { return m_GridColor; } }
 
         static public Controller Self { get { return s_Self; } set { s_Self = value; } }
         static public List<GameObject>[,] Tiles { get { return s_Tiles; } }
+        static public List<string> SortingLayers { get { return s_SortingLayers; } }
 
         protected override void OnEditorStart()
         {
@@ -44,6 +51,8 @@ namespace TileMapper
             }
             if (s_Self == null)
                 s_Self = FindObjectOfType<Controller>();
+
+            s_SortingLayers = new List<string>();
 
             CreateArray();
         }
@@ -82,14 +91,21 @@ namespace TileMapper
 
         protected virtual void OnValidate()
         {
-            if (m_GridSize.x < 0.0f)
-                m_GridSize = new Vector3(0.0f, m_GridSize.y, m_GridSize.z);
-            if (m_GridSize.y < 0.0f)
-                m_GridSize = new Vector3(m_GridSize.x, 0.0f, m_GridSize.z);
-            if (m_GridSize.z < 0.0f)
-                m_GridSize = new Vector3(m_GridSize.x, m_GridSize.y, 0.0f);
+            m_GridSize = new Vector3(
+                Mathf.Clamp(m_GridSize.x, 0, m_GridSize.x),
+                Mathf.Clamp(m_GridSize.y, 0, m_GridSize.y),
+                Mathf.Clamp(m_GridSize.z, 0, m_GridSize.z));
 
             m_UnitGridSize = new Vector3(m_GridSize.x / 100.0f, m_GridSize.y / 100.0f, m_GridSize.z / 100.0f);
+        }
+
+        static public void CacheSortingLayers()
+        {
+            // Grabs all sorting layers from Unity
+            // They are in the same order in the list s_SortingLayers as the user places them in the editor
+            Type internalEditorUtilityType = typeof(InternalEditorUtility);
+            PropertyInfo sortingLayersProperty = internalEditorUtilityType.GetProperty("sortingLayerNames", BindingFlags.Static | BindingFlags.NonPublic);
+            s_SortingLayers.AddRange((string[])sortingLayersProperty.GetValue(null, new object[0]));
         }
 
         [MenuItem("TileMapper/Create Array")]
@@ -109,11 +125,11 @@ namespace TileMapper
                 if ((int)ObjectGridPosition.x > HighestX)
                     HighestX = (int)ObjectGridPosition.x;
                 if ((int)ObjectGridPosition.x < LowestX)
-                    LowestX  = (int)ObjectGridPosition.x;
+                    LowestX = (int)ObjectGridPosition.x;
                 if ((int)ObjectGridPosition.y > HighestY)
                     HighestY = (int)ObjectGridPosition.y;
                 if ((int)ObjectGridPosition.y < LowestY)
-                    LowestY  = (int)ObjectGridPosition.y;
+                    LowestY = (int)ObjectGridPosition.y;
             }
             s_Tiles = new List<GameObject>[Math.Abs(HighestX) + Math.Abs(LowestX) + 1, Math.Abs(HighestY) + Math.Abs(LowestY) + 1];
 
@@ -121,15 +137,26 @@ namespace TileMapper
                 for (int j = 0; j < s_Tiles.GetLength(1); ++j)
                     s_Tiles[i, j] = new List<GameObject>();
 
-            
             s_IndexOffset = new Vector2(LowestX, LowestY);
 
             for (int i = 0; i < GameObjects.Count; ++i)
             {
-                Vector2 ObjectArrayIndex = GetArrayIndex(GameObjects[i]);                
-
+                Vector2 ObjectArrayIndex = GetArrayIndex(GameObjects[i]);
                 s_Tiles[(int)ObjectArrayIndex.x, (int)ObjectArrayIndex.y].Add(GameObjects[i]);
             }
+
+            CacheSortingLayers();
+            for (int i = 0; i < s_Tiles.GetLength(0); ++i)
+                for (int j = 0; j < s_Tiles.GetLength(1); ++j)
+                {
+                    s_Tiles[i, j].Sort(delegate (GameObject x, GameObject y)
+                    {
+                        if (x.GetComponent<SpriteRenderer>() == null) return 0;
+                        else if (y.GetComponent<SpriteRenderer>() == null) return 1;
+                        else if (GetSortingLayerOrder(x.GetComponent<SpriteRenderer>().sortingLayerName) >= GetSortingLayerOrder(y.GetComponent<SpriteRenderer>().sortingLayerName)) return 1;
+                        else return 0;
+                    });
+                }
         }
 
         static public Vector2 GetArrayIndex(GameObject a_Object)
@@ -142,12 +169,50 @@ namespace TileMapper
         }
         static public Vector2 GetArrayIndex(Vector3 a_Pos, Vector3 a_GridSize, Vector3 a_Offset)
         {
-            Vector2 GridPosition = GetGridPosition(a_Pos, a_GridSize, a_Offset); 
-
-            return new Vector2(
+            Vector2 GridPosition = GetGridPosition(a_Pos, a_GridSize, a_Offset);
+            
+            Vector2 ReturnValue = new Vector2(
                 GridPosition.x - s_IndexOffset.x,
                 GridPosition.y - s_IndexOffset.y);
 
+            ReturnValue = new Vector2(ReturnValue.x, (s_Tiles.GetLength(1) - 1) - ReturnValue.y);
+            return ReturnValue;
+        }
+
+        // Allows you to only pass a position and let the grid size be based on the Controller object's values
+        static public Vector3 GetGridPosition(Vector3 a_Position)
+        {
+            return GetGridPosition(a_Position, s_Self.m_UnitGridSize, Vector3.zero);
+        }
+        // Takes a position, and normalizes it over a grid size and offset
+        static public Vector3 GetGridPosition(Vector3 a_Position, Vector3 a_GridSize, Vector3 a_Offset)
+        {
+            // If the a_Gridsize isn't 0.0f for an axis, then snap it
+            // The first ternary operator (? :) is to prevent division by 0
+            // The second one makes its position in the grid based on its center 
+            //ex. a position of (0.17, 0, 0) is (1, 0, 0) in grid space not (2, 0, 0) 
+            return new Vector3(
+                    (a_GridSize.x != 0.0f) ?
+                        (int)((a_Position.x - a_Offset.x + ((a_Position.x > 0) ? a_GridSize.x / 2.0f : a_GridSize.x / -2.0f)) / a_GridSize.x) :
+                        a_Position.x,
+                    (a_GridSize.y != 0.0f) ?
+                        (int)((a_Position.y - a_Offset.x + ((a_Position.y > 0) ? a_GridSize.y / 2.0f : a_GridSize.y / -2.0f)) / a_GridSize.y) :
+                        a_Position.y,
+                    (a_GridSize.z != 0.0f) ?
+                        (int)((a_Position.z - a_Offset.x + ((a_Position.z > 0) ? a_GridSize.z / 2.0f : a_GridSize.z / -2.0f)) / a_GridSize.z) :
+                        a_Position.z);
+        }
+
+        static public int GetSortingLayerOrder(string a_SortingLayer)
+        {
+            for (int i = 0; i < s_SortingLayers.Count; ++i)
+            {
+                if (s_SortingLayers[i] == a_SortingLayer)
+                    return i;
+            }
+
+            Debug.LogError("GetSortingLayerOrder('" + a_SortingLayer + "') will return -1.\n'" + a_SortingLayer + "' does not exist in the list");
+            return -1;
         }
 
         static public void AddTile(ref Tile a_Tile)
@@ -167,27 +232,6 @@ namespace TileMapper
             s_Tiles[(int)a_Index.x, (int)a_Index.y].Remove(a_Object.gameObject);
         }
 
-        static public Vector3 GetGridPosition(Vector3 a_Position)
-        {
-            return GetGridPosition(a_Position, s_Self.m_UnitGridSize, Vector3.zero);
-        }
-        static public Vector3 GetGridPosition(Vector3 a_Position, Vector3 a_GridSize, Vector3 a_Offset)
-        {
-            // If the a_Gridsize isn't 0.0f for an axis, then snap it
-            // The first ternary operator (? :) is to prevent division by 0
-            // The second one makes its position in the grid based on its center 
-            //ex. a position of (0.17, 0, 0) is (1, 0, 0) in grid space not (2, 0, 0) 
-            return new Vector3(
-                    (a_GridSize.x != 0.0f) ?
-                        (int)((a_Position.x - a_Offset.x + ((a_Position.x > 0) ? a_GridSize.x / 2.0f : a_GridSize.x / -2.0f)) / a_GridSize.x) :
-                        a_Position.x,
-                    (a_GridSize.y != 0.0f) ?
-                        (int)((a_Position.y - a_Offset.x + ((a_Position.y > 0) ? a_GridSize.y / 2.0f : a_GridSize.y / -2.0f)) / a_GridSize.y) :
-                        a_Position.y,
-                    (a_GridSize.z != 0.0f) ?
-                        (int)((a_Position.z - a_Offset.x + ((a_Position.z > 0) ? a_GridSize.z / 2.0f : a_GridSize.z / -2.0f)) / a_GridSize.z) :
-                        a_Position.z);
-        }
         // Easy way to snap a tile object
         static public void SnapToGrid(Tile a_Tile)
         {
