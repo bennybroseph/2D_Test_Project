@@ -5,7 +5,7 @@ using System;
 using System.Reflection;
 using System.Linq;
 using System.Collections.Generic;
-
+using Bennybroseph.System;
 
 namespace TileMapper
 {
@@ -28,8 +28,9 @@ namespace TileMapper
         protected Vector3 m_LineNum;
 
         static private Controller s_Self;
-        static private List<GameObject>[,] s_Tiles;
-        static private Vector2 s_IndexOffset;
+        static private Dictionary<Vector2<int>, List<GameObject>> s_Tiles;
+        static private Vector2<int> s_TilemapOffset;
+        static private Vector2<int> s_TilemapSize;
 
         static private List<string> s_SortingLayers;
 
@@ -39,7 +40,8 @@ namespace TileMapper
         public Vector4 GridColor { get { return m_GridColor; } }
 
         static public Controller Self { get { return s_Self; } set { s_Self = value; } }
-        static public List<GameObject>[,] Tiles { get { return s_Tiles; } }
+        static public Dictionary<Vector2<int>, List<GameObject>> Tiles { get { return s_Tiles; } }
+        static public Vector2<int> TilemapSize { get { return s_TilemapSize; } }
         static public List<string> SortingLayers { get { return s_SortingLayers; } }
 
         protected override void OnEditorStart()
@@ -51,8 +53,6 @@ namespace TileMapper
             }
             if (s_Self == null)
                 s_Self = FindObjectOfType<Controller>();
-
-            s_SortingLayers = new List<string>();
 
             CreateArray();
         }
@@ -101,65 +101,58 @@ namespace TileMapper
 
         static public void CacheSortingLayers()
         {
+            s_SortingLayers = new List<string>();
             // Grabs all sorting layers from Unity
             // They are in the same order in the list s_SortingLayers as the user places them in the editor
             Type internalEditorUtilityType = typeof(InternalEditorUtility);
             PropertyInfo sortingLayersProperty = internalEditorUtilityType.GetProperty("sortingLayerNames", BindingFlags.Static | BindingFlags.NonPublic);
             s_SortingLayers.AddRange((string[])sortingLayersProperty.GetValue(null, new object[0]));
+
+            s_SortingLayers.Sort();
         }
 
         [MenuItem("TileMapper/Create Array")]
         static public void CreateArray()
         {
+            CacheSortingLayers();
+
             List<GameObject> GameObjects = new List<GameObject>();
-            s_IndexOffset = Vector2.zero;
+            s_TilemapSize = new Vector2<int>(0, 0);
 
-            GameObjects.AddRange(GameObject.FindGameObjectsWithTag("GameTile"));
+            GameObjects.AddRange(GameObject.FindGameObjectsWithTag("GameTile").OrderBy(gameObject => GetSortingLayerOrder(gameObject.GetComponent<SpriteRenderer>().sortingLayerName)).ToList());
 
-            int HighestX = 0, LowestX = 0;
-            int HighestY = 0, LowestY = 0;
+            int LowestX = 0, HighestX = 0;
+            int LowestY = 0, HighestY = 0;
             foreach (GameObject gameObject in GameObjects)
             {
-                Vector3 ObjectGridPosition = GetGridPosition(gameObject.transform.position);
+                Vector3<int> ObjectGridPosition = new Vector3<int>((int)GetGridPosition(gameObject.transform.position).x, (int)GetGridPosition(gameObject.transform.position).y, 0);
 
-                if ((int)ObjectGridPosition.x > HighestX)
-                    HighestX = (int)ObjectGridPosition.x;
-                if ((int)ObjectGridPosition.x < LowestX)
-                    LowestX = (int)ObjectGridPosition.x;
-                if ((int)ObjectGridPosition.y > HighestY)
-                    HighestY = (int)ObjectGridPosition.y;
-                if ((int)ObjectGridPosition.y < LowestY)
-                    LowestY = (int)ObjectGridPosition.y;
+                if (ObjectGridPosition.x < LowestX)
+                    LowestX = ObjectGridPosition.x;
+                if (ObjectGridPosition.x > HighestX)
+                    HighestX = ObjectGridPosition.x;
+
+                if (ObjectGridPosition.y < LowestY)
+                    LowestY = ObjectGridPosition.y;
+                if (ObjectGridPosition.y > HighestY)
+                    HighestY = ObjectGridPosition.y;
             }
-            s_Tiles = new List<GameObject>[Math.Abs(HighestX) + Math.Abs(LowestX) + 1, Math.Abs(HighestY) + Math.Abs(LowestY) + 1];
+            s_TilemapOffset = new Vector2<int>(LowestX, LowestY);
+            s_TilemapSize = new Vector2<int>(Math.Abs(HighestX - LowestX) + 1, Math.Abs(HighestY - LowestY) + 1);
 
-            for (int i = 0; i < s_Tiles.GetLength(0); ++i)
-                for (int j = 0; j < s_Tiles.GetLength(1); ++j)
-                    s_Tiles[i, j] = new List<GameObject>();
-
-            s_IndexOffset = new Vector2(LowestX, LowestY);
-
-            for (int i = 0; i < GameObjects.Count; ++i)
+            s_Tiles = new Dictionary<Vector2<int>, List<GameObject>>();
+            foreach (GameObject gameObject in GameObjects)
             {
-                Vector2 ObjectArrayIndex = GetArrayIndex(GameObjects[i]);
-                s_Tiles[(int)ObjectArrayIndex.x, (int)ObjectArrayIndex.y].Add(GameObjects[i]);
+                Vector2<int> ArrayIndex = GetArrayIndex(gameObject);
+                if (!s_Tiles.ContainsKey(ArrayIndex))
+                    s_Tiles[ArrayIndex] = new List<GameObject>();
+                
+                s_Tiles[ArrayIndex].Add(gameObject);
             }
-
-            CacheSortingLayers();
-            for (int i = 0; i < s_Tiles.GetLength(0); ++i)
-                for (int j = 0; j < s_Tiles.GetLength(1); ++j)
-                {
-                    s_Tiles[i, j].Sort(delegate (GameObject x, GameObject y)
-                    {
-                        if (x.GetComponent<SpriteRenderer>() == null) return 0;
-                        else if (y.GetComponent<SpriteRenderer>() == null) return 1;
-                        else if (GetSortingLayerOrder(x.GetComponent<SpriteRenderer>().sortingLayerName) >= GetSortingLayerOrder(y.GetComponent<SpriteRenderer>().sortingLayerName)) return 1;
-                        else return 0;
-                    });
-                }
+            //s_Tiles = new List<GameObject>[Math.Abs(HighestX) + Math.Abs(LowestX) + 1, Math.Abs(HighestY) + Math.Abs(LowestY) + 1];
         }
 
-        static public Vector2 GetArrayIndex(GameObject a_Object)
+        static public Vector2<int> GetArrayIndex(GameObject a_Object)
         {
             if (a_Object.GetComponent<Tile>() != null)
                 return GetArrayIndex(a_Object.transform.position, a_Object.GetComponent<Tile>().GridSize, a_Object.GetComponent<Tile>().Offset);
@@ -167,15 +160,15 @@ namespace TileMapper
                 return GetArrayIndex(a_Object.transform.position, s_Self.m_UnitGridSize, Vector3.zero);
 
         }
-        static public Vector2 GetArrayIndex(Vector3 a_Pos, Vector3 a_GridSize, Vector3 a_Offset)
+        static public Vector2<int> GetArrayIndex(Vector3 a_Pos, Vector3 a_GridSize, Vector3 a_Offset)
         {
             Vector2 GridPosition = GetGridPosition(a_Pos, a_GridSize, a_Offset);
-            
-            Vector2 ReturnValue = new Vector2(
-                GridPosition.x - s_IndexOffset.x,
-                GridPosition.y - s_IndexOffset.y);
 
-            ReturnValue = new Vector2(ReturnValue.x, (s_Tiles.GetLength(1) - 1) - ReturnValue.y);
+            Vector2<int> ReturnValue = new Vector2<int>(
+                (int)GridPosition.x - s_TilemapOffset.x,
+                (int)GridPosition.y - s_TilemapOffset.y);
+
+            ReturnValue = new Vector2<int>(ReturnValue.x, (s_TilemapSize.y - 1)  - ReturnValue.y);
             return ReturnValue;
         }
 
@@ -215,21 +208,21 @@ namespace TileMapper
             return -1;
         }
 
-        static public void AddTile(ref Tile a_Tile)
+        static public void AddTile(Tile a_Tile)
         {
-            s_Tiles[(int)a_Tile.TileIndex.x, (int)a_Tile.TileIndex.y].Add(a_Tile.gameObject);
+            s_Tiles[GetArrayIndex(a_Tile.gameObject)].Add(a_Tile.gameObject);
         }
-        static public void AddTile(ref GameObject a_Object, Vector2 a_Index)
+        static public void AddTile(GameObject a_Object, Vector2 a_Index)
         {
-            s_Tiles[(int)a_Index.x, (int)a_Index.y].Add(a_Object.gameObject);
+            s_Tiles[GetArrayIndex(a_Object)].Add(a_Object);
         }
         static public void RemoveTile(Tile a_Tile)
         {
-            s_Tiles[(int)a_Tile.TileIndex.x, (int)a_Tile.TileIndex.y].Remove(a_Tile.gameObject);
+            s_Tiles[GetArrayIndex(a_Tile.gameObject)].Remove(a_Tile.gameObject);
         }
         static public void RemoveTile(GameObject a_Object, Vector2 a_Index)
         {
-            s_Tiles[(int)a_Index.x, (int)a_Index.y].Remove(a_Object.gameObject);
+            s_Tiles[GetArrayIndex(a_Object)].Remove(a_Object);
         }
 
         // Easy way to snap a tile object

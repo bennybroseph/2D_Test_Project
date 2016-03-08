@@ -2,12 +2,13 @@
 using UnityEditor;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using Bennybroseph.System;
 
 namespace TileMapperEditor
 {
     public class ControllerWindow : EditorWindow
     {
-        private Texture2D[,][] m_TextureCache;
+        private Dictionary<Vector2<int>, List<Texture2D>> m_TextureCache;
         private Texture2D m_SelectorTexture;
         private Texture2D m_CursorDrag;
 
@@ -15,15 +16,15 @@ namespace TileMapperEditor
 
         private Vector2 m_MouseGridPosition, m_OldMouseGridPosition;
 
-        private Vector2 m_SelectorPosition, m_OldSelectorPosition, m_SelectorGridPosition;
+        private Vector2<int> m_SelectorPosition, m_OldSelectorPosition, m_SelectorGridPosition;
 
         private Vector2 m_OldMousePosition;
         private bool m_ScrollFollowMouse;
 
-        private Vector2 m_ImageSize = new Vector2(32.0f, 32.0f);
-        private Vector2 m_ImageOffset = new Vector2(30.0f, 30.0f);
+        private Vector2<int> m_ImageSize = new Vector2<int>(32, 32);
+        private Vector2<int> m_ImageOffset = new Vector2<int>(30, 30);
 
-        private Vector2 m_GridViewOffset = new Vector2(0.0f, 100.0f);
+        private Vector2<int> m_GridViewOffset = new Vector2<int>(0, 100);
 
         private GUIStyle m_CenteredLabel;
 
@@ -48,8 +49,8 @@ namespace TileMapperEditor
             m_MouseGridPosition = Vector2.zero;
             m_OldMouseGridPosition = m_MouseGridPosition;
 
-            m_SelectorGridPosition = Vector2.zero;
-            m_SelectorPosition = new Vector2(
+            m_SelectorGridPosition = new Vector2<int>(0, 0);
+            m_SelectorPosition = new Vector2<int>(
                 (m_SelectorGridPosition.x * m_ImageSize.x) + m_ImageOffset.x,
                 (m_SelectorGridPosition.y * m_ImageSize.y) + m_ImageOffset.y);
             m_OldSelectorPosition = m_SelectorPosition;
@@ -60,7 +61,10 @@ namespace TileMapperEditor
         void OnGUI()
         {
             if (m_TextureCache == null)
+            {
                 CacheTextures();
+                return;
+            }
 
             if (m_CenteredLabel == null)
             {
@@ -88,11 +92,11 @@ namespace TileMapperEditor
                     {
                         if (E.button == 0)
                         {
-                            if (m_MouseGridPosition.x >= 0 && m_MouseGridPosition.x < m_TextureCache.GetLength(0) &&
-                                m_MouseGridPosition.y >= 0 && m_MouseGridPosition.y < m_TextureCache.GetLength(1))
+                            if (m_MouseGridPosition.x >= 0 && m_MouseGridPosition.x < TileMapper.Controller.TilemapSize.x &&
+                                m_MouseGridPosition.y >= 0 && m_MouseGridPosition.y < TileMapper.Controller.TilemapSize.y)
                             {
-                                m_SelectorGridPosition = m_MouseGridPosition;
-                                m_SelectorPosition = new Vector2(
+                                m_SelectorGridPosition = new Vector2<int>((int)m_MouseGridPosition.x, (int)m_MouseGridPosition.y);
+                                m_SelectorPosition = new Vector2<int>(
                                     (m_SelectorGridPosition.x * m_ImageSize.x) + m_ImageOffset.x,
                                     (m_SelectorGridPosition.y * m_ImageSize.y) + m_ImageOffset.y);
                             }
@@ -108,8 +112,8 @@ namespace TileMapperEditor
                     {
                         if (E.button == 1)
                         {
-                            if (m_MouseGridPosition.x >= 0 && m_MouseGridPosition.x <= m_TextureCache.GetLength(0) &&
-                                m_MouseGridPosition.y >= 0 && m_MouseGridPosition.y <= m_TextureCache.GetLength(1))
+                            if (m_MouseGridPosition.x >= 0 && m_MouseGridPosition.x < TileMapper.Controller.TilemapSize.x &&
+                                m_MouseGridPosition.y >= 0 && m_MouseGridPosition.y < TileMapper.Controller.TilemapSize.y)
                             {
                                 Cursor.visible = false;
                                 m_OldMousePosition = GUIUtility.GUIToScreenPoint(Event.current.mousePosition);
@@ -127,13 +131,19 @@ namespace TileMapperEditor
             }
 
             EditorGUILayout.LabelField(m_SelectorGridPosition.ToString());
-            for (int i = 0; i < m_TextureCache[(int)m_SelectorGridPosition.x, (int)m_SelectorGridPosition.y].Length; ++i)
+
+            List<Texture2D> Temp;
+            if (m_TextureCache.TryGetValue(m_SelectorGridPosition, out Temp) && Temp != null)
             {
-                GUI.DrawTexture(new Rect(75 + (i * 16), 0, 16, 16), m_TextureCache[(int)m_SelectorGridPosition.x, (int)m_SelectorGridPosition.y][i]);
+                Debug.Log("Works");
+                for (int i = 0; i < m_TextureCache[m_SelectorGridPosition].Count; ++i)
+                {
+                    GUI.DrawTexture(new Rect(75 + (i * 16), 0, 16, 16), m_TextureCache[m_SelectorGridPosition][i]);
+                }
             }
 
-            m_ImageSize = EditorGUILayout.Vector2Field("Image Size", m_ImageSize, GUILayout.Width(150));
-            m_ImageSize = new Vector2(Mathf.Ceil(Mathf.Clamp(m_ImageSize.x, 1, m_ImageSize.x)), Mathf.Ceil(Mathf.Clamp(m_ImageSize.y, 1, m_ImageSize.y)));
+            EditorGUILayout.Vector2Field("Image Size", m_ImageSize, GUILayout.Width(150));
+            //m_ImageSize = new Vector2(Mathf.Ceil(Mathf.Clamp(m_ImageSize.x, 1, m_ImageSize.x)), Mathf.Ceil(Mathf.Clamp(m_ImageSize.y, 1, m_ImageSize.y)));
 
             if (GUILayout.Button("Refresh", GUILayout.Width(75)))
             {
@@ -143,26 +153,27 @@ namespace TileMapperEditor
 
             m_ScrollPos = GUI.BeginScrollView(
                 new Rect(m_GridViewOffset.x, m_GridViewOffset.y, Screen.width, Screen.height - m_GridViewOffset.y - 20), m_ScrollPos,
-                new Rect(0, 0, (m_ImageSize.x * (m_TextureCache.GetLength(0) + 1)) + m_ImageOffset.x, (m_ImageSize.y * (m_TextureCache.GetLength(1) + 1)) + m_ImageOffset.y));
+                new Rect(0, 0, (m_ImageSize.x * (TileMapper.Controller.TilemapSize.x + 1)) + m_ImageOffset.x, (m_ImageSize.y * (TileMapper.Controller.TilemapSize.y + 1)) + m_ImageOffset.y));
             {
-                for (int i = 0; i < m_TextureCache.GetLength(0); ++i)
+                for (int i = 0; i < TileMapper.Controller.TilemapSize.x; ++i)
                 {
                     EditorGUI.LabelField(new Rect(m_ImageOffset.x + (i * m_ImageSize.x), 0, m_ImageSize.x, m_ImageSize.y), i.ToString(), m_CenteredLabel);
-                    for (int j = 0; j < m_TextureCache.GetLength(1); ++j)
+                    for (int j = 0; j < TileMapper.Controller.TilemapSize.y; ++j)
                     {
                         if (i == 0)
                             EditorGUI.LabelField(new Rect(0, m_ImageOffset.y + (j * m_ImageSize.y), m_ImageSize.x, m_ImageSize.y), j.ToString(), m_CenteredLabel);
-                        for (int k = 0; k < m_TextureCache[i, j].Length; ++k)
-                        {
-                            if (m_TextureCache[i, j][k] == null)
-                                continue;
 
-                            GUI.DrawTexture(new Rect(m_ImageOffset.x + (i * m_ImageSize.x), m_ImageOffset.y + (j * m_ImageSize.y), m_ImageSize.x, m_ImageSize.y), m_TextureCache[i, j][k]);
-                        }
+                        if (!m_TextureCache.ContainsKey(new Vector2<int>(i, j)))
+                            continue;                        
                     }
                 }
+                foreach (KeyValuePair<Vector2<int>, List<Texture2D>> Pair in m_TextureCache)
+                {
+                    foreach (Texture2D Texture in Pair.Value)
+                        GUI.DrawTexture(new Rect(m_ImageOffset.x + (Pair.Key.x * m_ImageSize.x), m_ImageOffset.y + (Pair.Key.y * m_ImageSize.y), m_ImageSize.x, m_ImageSize.y), Texture);
+                }
                 GUI.DrawTexture(new Rect(m_SelectorPosition.x, m_SelectorPosition.y, m_ImageSize.x, m_ImageSize.y), m_SelectorTexture);
-            }
+            }            
             GUI.EndScrollView();
 
             if (m_ScrollFollowMouse)
@@ -213,32 +224,56 @@ namespace TileMapperEditor
         {
             if (TileMapper.Controller.Tiles != null)
             {
-                m_TextureCache = new Texture2D[TileMapper.Controller.Tiles.GetLength(0), TileMapper.Controller.Tiles.GetLength(1)][];
+                m_TextureCache = new Dictionary<Vector2<int>, List<Texture2D>>();
 
-                for (int i = 0; i < m_TextureCache.GetLength(0); ++i)
-                    for (int j = 0; j < m_TextureCache.GetLength(1); ++j)
+                foreach (KeyValuePair<Vector2<int>, List<GameObject>> Pair in TileMapper.Controller.Tiles)
+                {
+                    if (!m_TextureCache.ContainsKey(Pair.Key))
+                        m_TextureCache[Pair.Key] = new List<Texture2D>();
+
+                    foreach (GameObject gameObject in TileMapper.Controller.Tiles[Pair.Key])
                     {
-                        m_TextureCache[i, j] = new Texture2D[TileMapper.Controller.Tiles[i, j].Count];
-                        for (int k = 0; k < m_TextureCache[i, j].Length; ++k)
+                        Texture2D TextureToCache;
+                        if (gameObject == null)
+                            TextureToCache = Resources.Load<Texture2D>("NULL_SPRITE");
+                        else
                         {
-                            Texture2D TextureToCache;
-
-                            if (TileMapper.Controller.Tiles[i, j][k] == null)
-                                TextureToCache = Resources.Load<Texture2D>("NULL_SPRITE");
-                            else
-                            {
-                                Rect SpriteRect = TileMapper.Controller.Tiles[i, j][k].GetComponent<SpriteRenderer>().sprite.rect;
-                                TextureToCache = new Texture2D((int)SpriteRect.width, (int)SpriteRect.height);
-                                Color[] PixelData = TileMapper.Controller.Tiles[i, j][k].GetComponent<SpriteRenderer>().sprite.texture.GetPixels((int)SpriteRect.x, (int)SpriteRect.y, (int)SpriteRect.width, (int)SpriteRect.height);
-                                TextureToCache.SetPixels(PixelData);
-                                TextureToCache.Apply(true);
-                            }
-                            TextureToCache.filterMode = FilterMode.Point;
-
-                            m_TextureCache[i, j][k] = TextureToCache;
+                            Rect SpriteRect = gameObject.GetComponent<SpriteRenderer>().sprite.rect;
+                            TextureToCache = new Texture2D((int)SpriteRect.width, (int)SpriteRect.height);
+                            Color[] PixelData = gameObject.GetComponent<SpriteRenderer>().sprite.texture.GetPixels((int)SpriteRect.x, (int)SpriteRect.y, (int)SpriteRect.width, (int)SpriteRect.height);
+                            TextureToCache.SetPixels(PixelData);
+                            TextureToCache.Apply(true);
                         }
+                        TextureToCache.filterMode = FilterMode.Point;
+
+                        m_TextureCache[Pair.Key].Add(TextureToCache);
                     }
+                }
             }
+            //    for (int i = 0; i < m_TextureCache.GetLength(0); ++i)
+            //        for (int j = 0; j < m_TextureCache.GetLength(1); ++j)
+            //        {
+            //            m_TextureCache[i, j] = new Texture2D[TileMapper.Controller.Tiles[i, j].Count];
+            //            for (int k = 0; k < m_TextureCache[i, j].Length; ++k)
+            //            {
+            //                Texture2D TextureToCache;
+
+            //                if (TileMapper.Controller.Tiles[i, j][k] == null)
+            //                    TextureToCache = Resources.Load<Texture2D>("NULL_SPRITE");
+            //                else
+            //                {
+            //                    Rect SpriteRect = TileMapper.Controller.Tiles[i, j][k].GetComponent<SpriteRenderer>().sprite.rect;
+            //                    TextureToCache = new Texture2D((int)SpriteRect.width, (int)SpriteRect.height);
+            //                    Color[] PixelData = TileMapper.Controller.Tiles[i, j][k].GetComponent<SpriteRenderer>().sprite.texture.GetPixels((int)SpriteRect.x, (int)SpriteRect.y, (int)SpriteRect.width, (int)SpriteRect.height);
+            //                    TextureToCache.SetPixels(PixelData);
+            //                    TextureToCache.Apply(true);
+            //                }
+            //                TextureToCache.filterMode = FilterMode.Point;
+
+            //                m_TextureCache[i, j][k] = TextureToCache;
+            //            }
+            //        }
+            //}
 
             m_SelectorTexture = Resources.Load<Texture2D>("Selector");
             m_SelectorTexture.filterMode = FilterMode.Point;

@@ -32,7 +32,7 @@ namespace TileMapper
             else
                 Debug.LogError(name + " does not have an anchor point!");
 
-            base.Start(); Debug.Log("Update");
+            base.Start();
         }
 
         protected override void OnGameStart()
