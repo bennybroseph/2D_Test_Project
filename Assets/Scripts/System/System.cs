@@ -1,14 +1,15 @@
 ﻿using UnityEngine;
-using System.Collections.Generic;
 using System;
 
 namespace Bennybroseph
 {
-    namespace System
+    namespace MySystem
     {
-        abstract public class BaseVector2<T> : IEquatable<BaseVector2<T>>, IEqualityComparer<BaseVector2<T>>
+        [Serializable]
+        abstract public class BaseVector2<T>
         {
             protected T m_x, m_y;
+            protected int m_HashCode;
 
             static public implicit operator Vector2(BaseVector2<T> a_BaseVector)
             {
@@ -41,51 +42,27 @@ namespace Bennybroseph
                 return "(" + m_x.ToString() + ", " + m_y.ToString() + ")";
             }
 
-            public virtual bool Equals(BaseVector2<T> a_VectorX, BaseVector2<T> a_VectorY)
+            public virtual void GenHashCode()
             {
-                Debug.Log("Test");
-                if (typeof(T) == typeof(int))
+                if (GetType() == typeof(BaseVector2<int>))
                 {
-                    BaseVector2<int> VectorX = a_VectorX as BaseVector2<int>;
-                    BaseVector2<int> VectorY = a_VectorY as BaseVector2<int>;
-
-                    if (VectorY.m_x == VectorX.m_x && VectorY.m_y == VectorX.m_y)
-                        return true;
-                    else
-                        return false;
+                    BaseVector2<int> This = this as BaseVector2<int>;
+                    m_HashCode = ((int)Math.Pow(This.m_x, 2) + (3 * This.m_x) + (2 * This.m_x * This.m_y) + This.m_y + (int)Math.Pow(This.m_y, 2)) / 2;
                 }
-                else
-                    return false;
-            }
-
-            public virtual int GetHashCode(BaseVector2<T> obj)
-            {
-                Debug.Log("Oops");
-                throw new NotImplementedException();
-            }
-
-            public virtual bool Equals(BaseVector2<T> other)
-            {
-                Debug.Log("Test");
-                if (typeof(T) == typeof(int))
+                if (GetType() == typeof(BaseVector2<float>))
                 {
-                    BaseVector2<int> VectorX = other as BaseVector2<int>;
-                    BaseVector2<int> VectorY = this as BaseVector2<int>;
-
-                    if (VectorY.m_x == VectorX.m_x && VectorY.m_y == VectorX.m_y)
-                        return true;
-                    else
-                        return false;
+                    BaseVector2<float> This = this as BaseVector2<float>;
+                    m_HashCode = (int)(Math.Pow(This.m_x, 2) + (3 * This.m_x) + (2 * This.m_x * This.m_y) + This.m_y + (int)Math.Pow(This.m_y, 2)) / 2;
                 }
-                else
-                    return false;
             }
 
-            public BaseVector2() { }
+            public BaseVector2() { GenHashCode(); }
             public BaseVector2(T a_x, T a_y)
             {
                 m_x = a_x;
                 m_y = a_y;
+
+                GenHashCode();
             }
         }
         abstract public class BaseVector3<T> : BaseVector2<T>
@@ -98,24 +75,24 @@ namespace Bennybroseph
                 m_z = a_z;
             }
         }
-
-        public class Vector2<T> : BaseVector2<T>
+        [Serializable]
+        public class IntVector2 : BaseVector2<int>
         {
-            public T x
+            public int x
             {
                 get { return m_x; }
-                set { m_x = value; }
+                set { m_x = value; GenHashCode(); }
             }
-            public T y
+            public int y
             {
                 get { return m_y; }
-                set { m_y = value; }
+                set { m_y = value; GenHashCode(); }
             }
 
-            public Vector2() : base() { }
-            public Vector2(T a_x, T a_y) : base(a_x, a_y) { }
+            public IntVector2() : base() { }
+            public IntVector2(int a_x, int a_y) : base(a_x, a_y) { }
         }
-
+        [Serializable]
         public class Vector3<T> : BaseVector3<T>
         {
             public T x

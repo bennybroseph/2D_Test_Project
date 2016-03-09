@@ -1,7 +1,5 @@
-﻿using UnityEngine;
-using UnityEditor;
-using System.Collections;
-using System;
+﻿using UnityEngine;              // Required for '[SerializeField]'
+using Bennybroseph.MySystem;    // Required for 'IntVector2'
 
 namespace TileMapper
 {
@@ -16,17 +14,18 @@ namespace TileMapper
         // The grid size in Unity units
         protected Vector3 m_UnitGridSize;
         [SerializeField, ReadOnly, Tooltip("The index of the tile in the static s_Tiles array of TileMapper.Controller\nCannot be edited, but is shown")]
-        protected Vector2 m_TileIndex;
+        protected IntVector2 m_TileIndex;
         [SerializeField, Tooltip("After snapping to the grid, the values in this variable will be added on to its current position\n\nValues are in PIXELS not units, because units are confusing in pixel based games\n1 unit = 100 pixels")]
         protected Vector3 m_Offset;
         // The offset in Unity units
         protected Vector3 m_UnitOffset;
 
         public bool ShouldSnap { get { return m_ShouldSnap; } }
-        public Vector3 GridSize { get { return m_UnitGridSize; } }
+        public Vector3 UnitGridSize { get { return m_UnitGridSize; } }
         public Vector2 TileIndex { get { return m_TileIndex; } }
-        public Vector3 Offset { get { return m_UnitOffset; } }
+        public Vector3 UnitOffset { get { return m_UnitOffset; } }
 
+        // Called whenever a value changes in the inspector
         protected virtual void OnValidate()
         {
             if (m_GridSize.x < 0.0f)
@@ -41,6 +40,7 @@ namespace TileMapper
             if (m_GridSize == Vector3.zero)
                 m_GridSize = Controller.Self.GridSize;
 
+            // Calculates the grid size in Unity units rather than pixels and stores them for use later by this or other classes
             m_UnitGridSize = new Vector3(m_GridSize.x / 100.0f, m_GridSize.y / 100.0f, m_GridSize.z / 100.0f);
             m_UnitOffset = new Vector3(m_Offset.x / 100.0f, m_Offset.y / 100.0f, m_Offset.z / 100.0f);
         }

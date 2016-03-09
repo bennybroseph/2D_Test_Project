@@ -23,6 +23,9 @@ namespace TileMapperEditor
             }
             EditorGUILayout.EndHorizontal();
 
+            EditorGUILayout.Vector2Field("Size", TileMapper.Controller.TilemapSize);
+            EditorGUILayout.Vector2Field("Size", TileMapper.Controller.TilemapOffset);
+
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Sorting Layers", EditorStyles.boldLabel);
             foreach (string Layer in TileMapper.Controller.SortingLayers)
