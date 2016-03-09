@@ -5,9 +5,9 @@ namespace Bennybroseph
 {
     namespace MySystem
     {
-        [Serializable]
         abstract public class BaseVector2<T>
         {
+            //[SerializeField]
             protected T m_x, m_y;
             protected int m_HashCode;
 

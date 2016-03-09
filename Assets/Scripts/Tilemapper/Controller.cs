@@ -1,17 +1,16 @@
-﻿using UnityEngine;
-using UnityEditor;
-using UnityEditorInternal;
-using System;
-using System.Reflection;
-using System.Linq;
-using System.Collections.Generic;
-using Bennybroseph.MySystem;
+﻿using UnityEngine;                  // Required for '[SerializeField]'
+using UnityEditorInternal;          // Required for 'InternalEditorUtility'
+using System;                       // Required for 'Math', 'Type' and 'Convert'
+using System.Reflection;            // Required for 'BindingFlags'
+using System.Linq;                  // Required for 'OrderBy'
+using System.Collections.Generic;   // Required for 'List<T>'
+using Bennybroseph.MySystem;        // Required for 'IntVector2'
 
 namespace TileMapper
 {
     public class Controller : ExecuteInEditor
     {
-        [SerializeField]
+        [SerializeField, Tooltip("Whether or not to show the grid lines in the scene view")]
         protected bool m_ShowGrid;
         [SerializeField, Tooltip("What grid size to draw\n\nValues are in PIXELS not units, because units are confusing in pixel based games\n1 unit = 100 pixels")]
         protected Vector3 m_GridSize;
@@ -20,44 +19,60 @@ namespace TileMapper
         [SerializeField, Tooltip("The color of the grid\nAcceptable range is 0-1 using floating point numbers")]
         protected Vector4 m_GridColor;
 
-        [SerializeField]
+        [SerializeField, Tooltip("The unit position to begin drawing lines in the scene view")]
         protected Vector3 m_LineOffset;
-        [SerializeField]
+        [SerializeField, Tooltip("The length in units each line will be in the scene view")]
         protected Vector3 m_LineLength;
-        [SerializeField]
-        protected Vector3 m_LineNum;
-        
+        [SerializeField, Tooltip("The number of lines to draw in the scene view")]
+        protected Vector3 m_NumberOfLines;
+
+        // The singleton instance
         static private Controller s_Self;
 
+        // Every tile in the hierarchy that has the tag 'GameTile'
+        // Sorted by Unity Sorting Layer
         protected Dictionary<string, List<GameObject>> m_Tiles;
-        [SerializeField]
+        [ReadOnly, SerializeField, Tooltip("All tiles grid position is offset by this value in order to zero out the smallest values")]
         protected IntVector2 m_TilemapOffset;
-        [SerializeField]
+        [ReadOnly, SerializeField, Tooltip("The size of the tile map by number of tiles in width and height")]
         protected IntVector2 m_TilemapSize;
 
+        // The sorting layers as dictated by the user in Unity
         protected List<string> m_SortingLayers;
 
-        public bool ShowGrid { get { return m_ShowGrid; } }
-        public Vector3 PixelGridSize { get { return m_GridSize; } }
-        public Vector3 GridSize { get { return m_UnitGridSize; } }
-        public Vector4 GridColor { get { return m_GridColor; } }
+        public bool ShowGrid { get { return m_ShowGrid; } }             // Read Only 'm_ShowGrid' property
+        public Vector3 PixelGridSize { get { return m_GridSize; } }     // Read Only 'm_GridSize' property
+        public Vector3 GridSize { get { return m_UnitGridSize; } }      // Read Only 'm_UnitGridSize' property
+        public Vector4 GridColor { get { return m_GridColor; } }        // Read Only 'm_GridColor' property
 
-        static public Controller Self { get { return s_Self; } set { s_Self = value; } }
+        // 'm_Self' property
+        static public Controller Self
+        {
+            get
+            {
+                while (s_Self == null)
+                    s_Self = FindObjectOfType<Controller>();
+                return s_Self;
+            }
+            set { s_Self = value; }     // Used to set the singleton in the inspector
+        }
 
-        static public Dictionary<string, List<GameObject>> Tiles { get { return s_Self.m_Tiles; } }
-        static public IntVector2 TilemapOffset { get { return s_Self.m_TilemapOffset; } }
-        static public IntVector2 TilemapSize { get { return s_Self.m_TilemapSize; } }
-        static public List<string> SortingLayers { get { return s_Self.m_SortingLayers; } }
+        static public Dictionary<string, List<GameObject>> Tiles { get { return Self.m_Tiles; } }
+        static public IntVector2 TilemapOffset { get { return Self.m_TilemapOffset; } }
+        static public IntVector2 TilemapSize { get { return Self.m_TilemapSize; } }
+        static public List<string> SortingLayers { get { return Self.m_SortingLayers; } }
 
         static private void SetSingleton()
         {
+            // Makes sure there are no more than 1 instance of this class
             while (FindObjectsOfType<Controller>().Length != 1)
             {
                 Debug.LogWarning("You cannot have more than one Controller object at a time. Deleted.");
                 DestroyImmediate(FindObjectOfType<Controller>().gameObject);
             }
+            // 's_Self' hasn't been set yet
             if (s_Self == null)
-                s_Self = FindObjectOfType<Controller>();
+                s_Self = FindObjectOfType<Controller>();    // Find the only instance of this class and assign 's_Self' to it
         }
         protected override void OnEditorStart()
         {
@@ -81,8 +96,11 @@ namespace TileMapper
 
         protected virtual void OnDrawGizmos()
         {
+            // The grid should be drawn
             if (m_ShowGrid)
             {
+                // Grabs the scene view camera
+                // This does not and will never grab the game camera
                 Vector3 CameraPos = Camera.current.transform.position;
 
                 Vector3 ScaledGridSize = m_UnitGridSize;
@@ -95,10 +113,10 @@ namespace TileMapper
                 Vector3 End = new Vector3(Start.x + (Mathf.Abs(CameraPos.z) * m_LineLength.x), Start.y + (Mathf.Abs(CameraPos.z) * m_LineLength.y));
 
                 Gizmos.color = m_GridColor;
-                for (int i = 0; i < 5 + Mathf.Abs(CameraPos.z) * m_LineNum.x; ++i)
+                for (int i = 0; i < 5 + Mathf.Abs(CameraPos.z) * m_NumberOfLines.x; ++i)
                     Gizmos.DrawLine(new Vector3(Start.x + i * ScaledGridSize.x, Start.y), new Vector3(Start.x + i * ScaledGridSize.x, End.y));
 
-                for (int i = 0; i < 5 + Mathf.Abs(CameraPos.z) * m_LineNum.y; ++i)
+                for (int i = 0; i < 5 + Mathf.Abs(CameraPos.z) * m_NumberOfLines.y; ++i)
                     Gizmos.DrawLine(new Vector3(Start.x, Start.y + i * ScaledGridSize.y), new Vector3(End.x, Start.y + i * ScaledGridSize.y));
             }
         }
@@ -113,16 +131,20 @@ namespace TileMapper
             m_UnitGridSize = new Vector3(m_GridSize.x / 100.0f, m_GridSize.y / 100.0f, m_GridSize.z / 100.0f);
         }
 
+        // -------------------------
+        // Start of static functions
+        // -------------------------
+
         static protected void CacheSortingLayers()
         {
-            s_Self.m_SortingLayers = new List<string>();
+            Self.m_SortingLayers = new List<string>();
             // Grabs all sorting layers from Unity
             // They are in the same order in the list s_SortingLayers as the user places them in the editor
             Type internalEditorUtilityType = typeof(InternalEditorUtility);
             PropertyInfo sortingLayersProperty = internalEditorUtilityType.GetProperty("sortingLayerNames", BindingFlags.Static | BindingFlags.NonPublic);
-            s_Self.m_SortingLayers.AddRange((string[])sortingLayersProperty.GetValue(null, new object[0]));
+            Self.m_SortingLayers.AddRange((string[])sortingLayersProperty.GetValue(null, new object[0]));
 
-            s_Self.m_SortingLayers.Sort();
+            Self.m_SortingLayers.Sort();
         }
 
         [ContextMenu("Create Array")]
@@ -131,7 +153,7 @@ namespace TileMapper
             CacheSortingLayers();
 
             List<GameObject> GameObjects = new List<GameObject>();
-            s_Self.m_TilemapSize = new IntVector2(0, 0);
+            Self.m_TilemapSize = new IntVector2(0, 0);
 
             GameObjects.AddRange(GameObject.FindGameObjectsWithTag("GameTile").OrderBy(gameObject => GetSortingLayerOrder(gameObject.GetComponent<SpriteRenderer>().sortingLayerName)).ToList());
 
@@ -151,17 +173,17 @@ namespace TileMapper
                 if (ObjectGridPosition.y > HighestY)
                     HighestY = ObjectGridPosition.y;
             }
-            s_Self.m_TilemapOffset = new IntVector2(LowestX, LowestY);
-            s_Self.m_TilemapSize = new IntVector2(Math.Abs(HighestX - LowestX) + 1, Math.Abs(HighestY - LowestY) + 1);
+            Self.m_TilemapOffset = new IntVector2(LowestX, LowestY);
+            Self.m_TilemapSize = new IntVector2(Math.Abs(HighestX - LowestX) + 1, Math.Abs(HighestY - LowestY) + 1);
 
-            s_Self.m_Tiles = new Dictionary<string, List<GameObject>>();
+            Self.m_Tiles = new Dictionary<string, List<GameObject>>();
             foreach (GameObject gameObject in GameObjects)
             {
                 IntVector2 ArrayIndex = GetArrayIndex(gameObject);
-                if (!s_Self.m_Tiles.ContainsKey(ArrayIndex.ToString()))
-                    s_Self.m_Tiles[ArrayIndex.ToString()] = new List<GameObject>();
+                if (!Self.m_Tiles.ContainsKey(ArrayIndex.ToString()))
+                    Self.m_Tiles[ArrayIndex.ToString()] = new List<GameObject>();
 
-                s_Self.m_Tiles[ArrayIndex.ToString()].Add(gameObject);
+                Self.m_Tiles[ArrayIndex.ToString()].Add(gameObject);
             }
         }
 
@@ -179,24 +201,24 @@ namespace TileMapper
             if (a_Object.GetComponent<Tile>() != null)
                 return GetArrayIndex(a_Object.transform.position, a_Object.GetComponent<Tile>().UnitGridSize, a_Object.GetComponent<Tile>().UnitOffset);
             else
-                return GetArrayIndex(a_Object.transform.position, s_Self.m_UnitGridSize, Vector3.zero);
+                return GetArrayIndex(a_Object.transform.position, Self.m_UnitGridSize, Vector3.zero);
         }
         static public IntVector2 GetArrayIndex(Vector3 a_Pos, Vector3 a_GridSize, Vector3 a_Offset)
         {
             Vector2 GridPosition = GetGridPosition(a_Pos, a_GridSize, a_Offset);
-
+            
             IntVector2 ReturnValue = new IntVector2(
-                (int)GridPosition.x - s_Self.m_TilemapOffset.x,
-                (int)GridPosition.y - s_Self.m_TilemapOffset.y);
+                (int)GridPosition.x - Self.m_TilemapOffset.x,
+                (int)GridPosition.y - Self.m_TilemapOffset.y);
 
-            ReturnValue = new IntVector2(ReturnValue.x, (s_Self.m_TilemapSize.y - 1) - ReturnValue.y);
+            ReturnValue = new IntVector2(ReturnValue.x, (Self.m_TilemapSize.y - 1) - ReturnValue.y);
             return ReturnValue;
         }
 
         // Allows you to only pass a position and let the grid size be based on the Controller object's values
         static public Vector3 GetGridPosition(Vector3 a_Position)
         {
-            return GetGridPosition(a_Position, s_Self.m_UnitGridSize, Vector3.zero);
+            return GetGridPosition(a_Position, Self.m_UnitGridSize, Vector3.zero);
         }
         // Takes a position, and normalizes it over a grid size and offset
         static public Vector3 GetGridPosition(Vector3 a_Position, Vector3 a_GridSize, Vector3 a_Offset)
@@ -219,9 +241,9 @@ namespace TileMapper
 
         static public int GetSortingLayerOrder(string a_SortingLayer)
         {
-            for (int i = 0; i < s_Self.m_SortingLayers.Count; ++i)
+            for (int i = 0; i < Self.m_SortingLayers.Count; ++i)
             {
-                if (s_Self.m_SortingLayers[i] == a_SortingLayer)
+                if (Self.m_SortingLayers[i] == a_SortingLayer)
                     return i;
             }
 
@@ -229,21 +251,13 @@ namespace TileMapper
             return -1;
         }
 
-        static public void AddTile(Tile a_Tile)
+        static public void AddTile(GameObject a_Object)
         {
-            s_Self.m_Tiles[GetArrayIndex(a_Tile.gameObject).ToString()].Add(a_Tile.gameObject);
+            Self.m_Tiles[GetArrayIndex(a_Object).ToString()].Add(a_Object);
         }
-        static public void AddTile(GameObject a_Object, Vector2 a_Index)
+        static public void RemoveTile(GameObject a_Object)
         {
-            s_Self.m_Tiles[GetArrayIndex(a_Object).ToString()].Add(a_Object);
-        }
-        static public void RemoveTile(Tile a_Tile)
-        {
-            s_Self.m_Tiles[GetArrayIndex(a_Tile.gameObject).ToString()].Remove(a_Tile.gameObject);
-        }
-        static public void RemoveTile(GameObject a_Object, Vector2 a_Index)
-        {
-            s_Self.m_Tiles[GetArrayIndex(a_Object).ToString()].Remove(a_Object);
+            Self.m_Tiles[GetArrayIndex(a_Object).ToString()].Remove(a_Object);
         }
 
         // Easy way to snap a tile object
@@ -255,7 +269,7 @@ namespace TileMapper
         // Allows snapping based on the Editor grid. Useful, but uses some bad singleton code
         static public void SnapToGrid(GameObject a_Object)
         {
-            SnapToGrid(a_Object, s_Self.m_UnitGridSize, Vector3.zero);
+            SnapToGrid(a_Object, Self.m_UnitGridSize, Vector3.zero);
         }
         // Useful to keep a snap function outside of the Tile object so that any GameObject can snap to the grid, not just Tile objects should it be desired
         static public void SnapToGrid(GameObject a_Object, Vector3 a_GridSize, Vector3 a_Offset)
@@ -281,13 +295,6 @@ namespace TileMapper
                     (a_GridSize.z != 0.0f) ?
                         a_Object.transform.position.z * a_GridSize.z + a_Offset.z :
                         a_Object.transform.position.z + a_Offset.z);
-
-                //Avoid floating point error. Unnecessary in some cases, but for the most part having 0.080000001 is unacceptable
-                //Converts something like that to 0.08, which is correct.
-                //a_Object.transform.position = new Vector3(
-                //    (int)(a_Object.transform.position.x * 100.0f) / 100.0f,
-                //    (int)(a_Object.transform.position.y * 100.0f) / 100.0f,
-                //    (int)(a_Object.transform.position.z * 100.0f) / 100.0f);
             }
         }
     }

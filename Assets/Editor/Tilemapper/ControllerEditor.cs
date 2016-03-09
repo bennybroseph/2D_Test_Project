@@ -1,6 +1,4 @@
-﻿using UnityEngine;
-using UnityEditor;
-using System.Collections.Generic;
+﻿using UnityEditor;
 
 namespace TileMapperEditor
 {
@@ -18,13 +16,10 @@ namespace TileMapperEditor
 
             EditorGUILayout.BeginHorizontal();
             {
-                EditorGUILayout.LabelField("Self", GUILayout.Width(115));
+                EditorGUILayout.LabelField("Self");
                 TileMapper.Controller.Self = EditorGUILayout.ObjectField(TileMapper.Controller.Self, typeof(TileMapper.Controller), true) as TileMapper.Controller;
             }
             EditorGUILayout.EndHorizontal();
-
-            EditorGUILayout.Vector2Field("Size", TileMapper.Controller.TilemapSize);
-            EditorGUILayout.Vector2Field("Size", TileMapper.Controller.TilemapOffset);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Sorting Layers", EditorStyles.boldLabel);

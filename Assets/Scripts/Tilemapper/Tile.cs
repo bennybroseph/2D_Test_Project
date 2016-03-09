@@ -25,7 +25,7 @@ namespace TileMapper
         public Vector2 TileIndex { get { return m_TileIndex; } }
         public Vector3 UnitOffset { get { return m_UnitOffset; } }
 
-        // Called whenever a value changes in the inspector
+        // Called whenever a value of this object changes in the inspector
         protected virtual void OnValidate()
         {
             if (m_GridSize.x < 0.0f)
